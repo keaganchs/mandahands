@@ -100,7 +100,7 @@ def run(hid: str) -> dict:
 
 
 def report(metas: list[dict]):
-  from mandahands.embodiments.real.sources import SKIPPED
+  from mandahands.embodiments.real.sources import COMMERCIAL, SKIPPED
 
   lines = [
     "# Real hands report",
@@ -112,9 +112,10 @@ def report(metas: list[dict]):
     "candidate centres found from the hand's open/closed geometry (`mandahands/sim/scripted.py`).",
     "",
     "Assets are generated locally from pinned sources and are not redistributed (CC-BY-SA, LGPL, NASA-1.3 terms).",
+    "Every included source license allows commercial use; obligations are listed per hand (not legal advice).",
     "",
-    "| id | robot | license | joints | actuators | coupling | grasp pass | best trial | flags |",
-    "|---|---|---|---|---|---|---|---|---|",
+    "| id | robot | license | commercial use | joints | actuators | coupling | self-coll. pairs | grasp pass | best trial | flags |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
   ]
   for m in metas:
     c, g = m["counts"], m["grasp"]
@@ -127,7 +128,9 @@ def report(metas: list[dict]):
       coup.append(f"{c['neq'] - len(m['coupling'])} other eq")
     b = g["best"]
     best = f"{b['obj']} r={1000 * b['size']:.0f} mm, drift {1000 * b['drift']:.0f} mm" if b else "-"
-    lines.append(f"| {m['id']} | {m['robot']} | {m['license']} | {c['njnt']} | {c['nu']} | {', '.join(coup) or '-'} | "
+    sc = m["self_collision"]
+    lines.append(f"| {m['id']} | {m['robot']} | {m['license']} | {COMMERCIAL[m['license']]} | {c['njnt']} | {c['nu']} | "
+                 f"{', '.join(coup) or '-'} | {'off' if sc.get('disabled') else sc['n_pairs']} | "
                  f"{'PASS' if g['passed'] else 'FAIL'} {g['passed']}/{g['trials']} | {best} | {', '.join(m['flags']) or '-'} |")
   lines += ["", "## Notes per hand", ""]
   for m in metas:
@@ -138,6 +141,12 @@ def report(metas: list[dict]):
     lines.append(f"- {m['counts']['njnt']} joints, {m['counts']['nu']} actuators "
                  f"({', '.join(sorted({a['origin'] for a in m['actuators']})) or 'tendon'}), mass {m['counts']['mass']:.3f} kg, "
                  f"{m['counts']['ncollision']} collision geoms")
+    sc = m["self_collision"]
+    if sc.get("disabled"):
+      lines.append("- Self-collision: off for this hand (see notes)")
+    else:
+      lines.append(f"- Self-collision: {sc['n_pairs']} pairs (fingertip-palm, adjacent fingertips) over {sc['n_fingers']} fingers"
+                   + (f"; {sc['skipped_penetrating']} skipped, penetrating at rest" if sc["skipped_penetrating"] else ""))
     rules = m["probe"]["close_rule"]
     lines.append(f"- Closing direction: {sum(v == 'range' for v in rules.values())} by range, "
                  f"{sum(v == 'geometry' for v in rules.values())} by geometry, {sum(v == 'override' for v in rules.values())} override")

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from mandahands.sim.batch import ContactOverflow, check_overflow, contact_stats, make_batch
-from mandahands.sim.builder import SceneCfg, build_scene, close_ctrl
+from mandahands.sim.builder import SceneCfg, build_scene, close_ctrl, simple_hand
 
 
 def _script(mjm, i, mz):
@@ -34,8 +34,12 @@ def _rollout_both(**scene_kw):
 
 
 def test_warp_matches_cpu_free_space():
-  # object out of reach: trajectories must match tightly (observed ~7e-7 rad over 2 s)
-  err, _, _ = _rollout_both(obj_pos=[0.5, 0.5, 0.03])
+  # no contact at all (object out of reach, fingertip self-collision pairs removed):
+  # trajectories must match tightly (observed ~7e-7 rad over 2 s)
+  hand = simple_hand(SceneCfg())
+  for p in list(hand.pairs):
+    hand.delete(p)
+  err, _, _ = _rollout_both(hand=hand, wrist_pos=[0, 0, 0.105], obj_pos=[0.5, 0.5, 0.03])
   assert err < 1e-5, err
 
 

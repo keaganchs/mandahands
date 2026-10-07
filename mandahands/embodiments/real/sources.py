@@ -25,6 +25,17 @@ REPOS = {
   "menagerie": ("https://github.com/google-deepmind/mujoco_menagerie", "f054586a8e90465d49ee5be15335c4a0c7f57caf", ["leap_hand", "wonik_allegro", "shadow_hand", "robotiq_2f85"]),
 }
 
+# Commercial use is required (user decision, 2026-10-07). Not legal advice: obligations to review before release.
+COMMERCIAL = {
+  "MIT": "yes",
+  "BSD-2-Clause": "yes",
+  "BSD-3-Clause": "yes",
+  "Apache-2.0": "yes (notice)",
+  "CC-BY-SA-4.0": "yes (attribution; share-alike on derived assets)",
+  "LGPL-3.0": "yes (LGPL terms on modified model files)",
+  "NASA-1.3": "yes (notice; modifications must be disclosed)",
+}
+
 # ROS packages that ship without a package.xml: name -> path under data/sources
 EXTRA_PACKAGES = {
   "iCub": "icub/iCub",
@@ -46,6 +57,7 @@ class HandSource:
   notes: list[str] = field(default_factory=list)
   close: dict[str, str] = field(default_factory=dict)  # actuator -> "lo"/"hi" where the probe heuristics are wrong
   decompose: bool = False  # CoACD on collision meshes whose convex hull fills the grasp space
+  self_collision: bool = True  # fingertip-palm / adjacent-fingertip pairs
 
 
 HANDS = [
@@ -57,8 +69,10 @@ HANDS = [
   HandSource("talos_right", "TALOS", "talos", "talos/urdf/talos_full_v2.urdf", "gripper_right_base_link", "LGPL-3.0"),
   HandSource("nao_right", "NAO", "nao", "nao/nao_description/urdf/naoV50_generated_urdf/nao.urdf", "r_wrist", "BSD-3-Clause",
              notes=["Meshes are CC-BY-NC-ND behind a click-through installer (nao_meshes); not accepted on the user's behalf.",
-                    "Collision geometry approximated with capsules from the kinematic tree."],
-             close={"RHand_pos": "lo"}),  # Aldebaran convention: RHand 0 = closed, 1 = open
+                    "Collision geometry approximated with capsules from the kinematic tree.",
+                    "Self-collision off: the guessed capsules collide where the real hand would not (no pairs: passes; any pairs: fails).",
+                    "Real meshes are non-commercial, so this is a mechanism-only embodiment, not a real-geometry anchor."],
+             close={"RHand_pos": "lo"}, self_collision=False),  # Aldebaran convention: RHand 0 = closed, 1 = open
   HandSource("romeo_right", "Romeo", "romeo", "romeo/romeo_description/urdf/romeo_generated_urdf/romeo.urdf", "r_wrist", "BSD-3-Clause"),
   HandSource("jaxon_right", "JAXON", "jaxon", "jaxon/urdf/jaxon_jvrc.urdf", "RARM_LINK7", "CC-BY-SA-4.0", decompose=True,
              notes=["Ring-shaped finger meshes: convex hulls fill the grasp space, so collision meshes are CoACD-decomposed."]),
@@ -83,7 +97,8 @@ SKIPPED = {
   "WALK-MAN": "Pisa/IIT SoftHand modeled as a rigid mesh on fixed joints (soft_hand.urdf.xacro); no articulated hand.",
   "Atlas DRC v3 (drake models)": "Arm ends at the wrist (l/r_arm_lwy); no hand modeled.",
   "Atlas v4 (roboschool)": "Arm ends at the wrist (l/r_arm_wry2); no hand modeled.",
-  "Digit": "No hand joints; no license listed.",
+  "Digit": "No hand joints; no license listed (not usable commercially anyway).",
+  "NAO meshes (nao_meshes)": "CC-BY-NC-ND: non-commercial, excluded. NAO is kept with capsule collision geometry.",
   "SigmaBan": "No hand joints.",
   "Bolt, Cassie, Spryped, Upkie, Hector, SA01": "Bipeds without arms/hands; excluded by spec.",
 }

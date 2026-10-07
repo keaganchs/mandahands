@@ -8,6 +8,7 @@ import numpy as np
 
 from mandahands.embodiments.real.load import find_packages, load
 from mandahands.embodiments.real.sources import EXTRA_PACKAGES, REPOS, HandSource
+from mandahands.sim.builder import add_self_collision
 
 SOURCES = Path("data/sources")
 COACD_CACHE = Path("data/cache/coacd")
@@ -213,6 +214,9 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
     if j.armature < MIN_ARMATURE:
       j.armature = MIN_ARMATURE
 
+  self_collision = add_self_collision(spec) if hs.self_collision else dict(n_pairs=0, n_fingers=0, disabled=True)
+  # (after actuators: it simulates the hand closing)
+
   url, commit, _ = REPOS[hs.repo]
   meta = dict(
     id=hs.id, robot=hs.robot, source=hs.source, license=hs.license,
@@ -222,6 +226,7 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
     coupling=[dict(follower=f, leader=l, polycoef=c) for f, (l, c) in follower.items()],
     tendon_actuators=tendon_driven,
     removed_arm_joints=sorted(arm_joints),
+    self_collision=self_collision,
     flags=flags, notes=notes,
   )
   return spec, meta

@@ -7,34 +7,36 @@ the wrist, with the open hand not starting inside it. The search tries sphere/cy
 candidate centres found from the hand's open/closed geometry (`mandahands/sim/scripted.py`).
 
 Assets are generated locally from pinned sources and are not redistributed (CC-BY-SA, LGPL, NASA-1.3 terms).
+Every included source license allows commercial use; obligations are listed per hand (not legal advice).
 
-| id | robot | license | joints | actuators | coupling | grasp pass | best trial | flags |
-|---|---|---|---|---|---|---|---|---|
-| icub_mk3_left | iCub | CC-BY-SA-4.0 | 11 | 11 | - | PASS 7/48 | box r=11 mm, drift 6 mm | actuators_estimated, effort_placeholder:11, inertia_from_geometry:10 |
-| r2_right | Robonaut 2 | NASA-1.3 | 18 | 18 | - | PASS 3/42 | box r=22 mm, drift 4 mm | collision_approximated:13, actuators_estimated, range_placeholder:18, effort_placeholder:18, inertia_from_geometry:28 |
-| valkyrie_right | Valkyrie | NASA-1.3 | 13 | 13 | - | PASS 2/36 | cylinder r=9 mm, drift 6 mm | actuators_estimated |
-| talos_right | TALOS | LGPL-3.0 | 7 | 1 | 6 mimic eq | PASS 32/48 | box r=11 mm, drift 1 mm | actuators_estimated |
-| nao_right | NAO | BSD-3-Clause | 9 | 1 | 8 mimic eq | PASS 1/24 | box r=6 mm, drift 2 mm | collision_approximated:19, actuators_estimated |
-| romeo_right | Romeo | BSD-3-Clause | 13 | 1 | 12 mimic eq | PASS 15/42 | box r=8 mm, drift 0 mm | collision_approximated:1, actuators_estimated |
-| jaxon_right | JAXON | CC-BY-SA-4.0 | 2 | 2 | - | PASS 18/36 | cylinder r=13 mm, drift 1 mm | convex_decomposed:3, actuators_estimated |
-| jvrc1_right | JVRC-1 | BSD-2-Clause | 6 | 1 | 5 mimic eq | PASS 3/36 | sphere r=30 mm, drift 8 mm | actuator_converted_from_motor |
-| h1_inspire_dfq_right | Unitree H1 | BSD-3-Clause | 12 | 6 | 6 mimic eq | PASS 12/51 | box r=6 mm, drift 1 mm | actuators_estimated |
-| h1_2_inspire_ftp_right | Unitree H1-2 | BSD-3-Clause | 12 | 6 | 6 mimic eq | PASS 7/51 | box r=6 mm, drift 1 mm | actuators_estimated |
-| g1_dex3_1_right | Unitree G1 | BSD-3-Clause | 7 | 7 | - | PASS 5/48 | sphere r=16 mm, drift 6 mm | actuators_estimated |
-| g1_dex1_1 | Unitree G1 | BSD-3-Clause | 2 | 2 | - | PASS 24/42 | box r=16 mm, drift 2 mm | actuators_estimated |
-| g1_brainco_right | Unitree G1 | BSD-3-Clause | 16 | 11 | 5 mimic eq | PASS 12/39 | sphere r=18 mm, drift 1 mm | actuators_estimated, range_placeholder:5 |
-| unitree_dex5_1_right | Unitree (G1/H2) | BSD-3-Clause | 20 | 20 | - | PASS 17/48 | box r=6 mm, drift 0 mm | actuators_estimated |
-| unitree_dex2_5_right | Unitree (G1/H2) | BSD-3-Clause | 10 | 10 | - | PASS 12/48 | box r=6 mm, drift 1 mm | actuators_estimated |
-| leap_right | LEAP Hand | MIT | 16 | 16 | - | PASS 5/21 | box r=16 mm, drift 3 mm | - |
-| allegro_right | Wonik Allegro | BSD-2-Clause | 16 | 16 | - | PASS 7/36 | box r=7 mm, drift 3 mm | - |
-| shadow_right | Shadow Hand E3M5 | Apache-2.0 | 22 | 18 | 4 tendon act | PASS 10/48 | box r=9 mm, drift 0 mm | - |
-| robotiq_2f85 | Robotiq 2F-85 | BSD-2-Clause | 8 | 1 | 1 mimic eq, 1 tendon act, 2 other eq | PASS 22/33 | sphere r=20 mm, drift 1 mm | - |
+| id | robot | license | commercial use | joints | actuators | coupling | self-coll. pairs | grasp pass | best trial | flags |
+|---|---|---|---|---|---|---|---|---|---|---|
+| icub_mk3_left | iCub | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 11 | 11 | - | 5 | PASS 7/48 | box r=11 mm, drift 5 mm | actuators_estimated, effort_placeholder:11, inertia_from_geometry:10 |
+| r2_right | Robonaut 2 | NASA-1.3 | yes (notice; modifications must be disclosed) | 18 | 18 | - | 25 | PASS 3/45 | sphere r=16 mm, drift 2 mm | collision_approximated:13, actuators_estimated, range_placeholder:18, effort_placeholder:18, inertia_from_geometry:28 |
+| valkyrie_right | Valkyrie | NASA-1.3 | yes (notice; modifications must be disclosed) | 13 | 13 | - | 6 | PASS 3/36 | box r=7 mm, drift 2 mm | actuators_estimated |
+| talos_right | TALOS | LGPL-3.0 | yes (LGPL terms on modified model files) | 7 | 1 | 6 mimic eq | 6 | PASS 32/48 | box r=11 mm, drift 1 mm | actuators_estimated |
+| nao_right | NAO | BSD-3-Clause | yes | 9 | 1 | 8 mimic eq | off | PASS 1/24 | box r=6 mm, drift 2 mm | collision_approximated:19, actuators_estimated |
+| romeo_right | Romeo | BSD-3-Clause | yes | 13 | 1 | 12 mimic eq | 9 | PASS 15/42 | box r=8 mm, drift 0 mm | collision_approximated:1, actuators_estimated |
+| jaxon_right | JAXON | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 2 | 2 | - | 3 | PASS 15/36 | cylinder r=13 mm, drift 1 mm | convex_decomposed:3, actuators_estimated |
+| jvrc1_right | JVRC-1 | BSD-2-Clause | yes | 6 | 1 | 5 mimic eq | 5 | PASS 3/36 | sphere r=30 mm, drift 8 mm | actuator_converted_from_motor |
+| h1_inspire_dfq_right | Unitree H1 | BSD-3-Clause | yes | 12 | 6 | 6 mimic eq | 10 | PASS 13/45 | box r=6 mm, drift 2 mm | actuators_estimated |
+| h1_2_inspire_ftp_right | Unitree H1-2 | BSD-3-Clause | yes | 12 | 6 | 6 mimic eq | 10 | PASS 10/45 | box r=6 mm, drift 2 mm | actuators_estimated |
+| g1_dex3_1_right | Unitree G1 | BSD-3-Clause | yes | 7 | 7 | - | 3 | PASS 1/45 | cylinder r=16 mm, drift 4 mm | actuators_estimated |
+| g1_dex1_1 | Unitree G1 | BSD-3-Clause | yes | 2 | 2 | - | 1 | PASS 24/42 | box r=16 mm, drift 2 mm | actuators_estimated |
+| g1_brainco_right | Unitree G1 | BSD-3-Clause | yes | 16 | 11 | 5 mimic eq | 6 | PASS 13/39 | cylinder r=9 mm, drift 1 mm | actuators_estimated, range_placeholder:5 |
+| unitree_dex5_1_right | Unitree (G1/H2) | BSD-3-Clause | yes | 20 | 20 | - | 11 | PASS 8/48 | box r=12 mm, drift 1 mm | actuators_estimated |
+| unitree_dex2_5_right | Unitree (G1/H2) | BSD-3-Clause | yes | 10 | 10 | - | 10 | PASS 9/48 | box r=12 mm, drift 2 mm | actuators_estimated |
+| leap_right | LEAP Hand | MIT | yes | 16 | 16 | - | 36 | PASS 7/36 | box r=17 mm, drift 3 mm | - |
+| allegro_right | Wonik Allegro | BSD-2-Clause | yes | 16 | 16 | - | 9 | PASS 13/45 | box r=12 mm, drift 1 mm | - |
+| shadow_right | Shadow Hand E3M5 | Apache-2.0 | yes (notice) | 22 | 18 | 4 tendon act | 17 | PASS 10/45 | box r=10 mm, drift 0 mm | - |
+| robotiq_2f85 | Robotiq 2F-85 | BSD-2-Clause | yes | 8 | 1 | 1 mimic eq, 1 tendon act, 2 other eq | 3 | PASS 20/33 | sphere r=10 mm, drift 1 mm | - |
 
 ## Notes per hand
 
 ### icub_mk3_left (iCub, awesome-humanoid-learning)
 - Source: https://github.com/robotology/icub-models @ `dca8c618c2`, `icub/iCub/robots/left_hand_mk3/model.urdf`, root link `l_hand_palm_link`; removed arm joints: none
 - 11 joints, 11 actuators (estimated), mass 0.190 kg, 12 collision geoms
+- Self-collision: 5 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 11 by range, 0 by geometry, 0 override
 - Only a left-hand mk3 model exists. Full iCub robot URDFs in this repo have no finger joints.
 - Real hand is tendon-coupled; URDF has no mimic/coupling, so joints are modeled independently.
@@ -44,6 +46,7 @@ Assets are generated locally from pinned sources and are not redistributed (CC-B
 ### r2_right (Robonaut 2, awesome-humanoid-learning)
 - Source: https://github.com/gkjohnson/nasa-urdf-robots @ `1f89ecba91`, `nasa/r2_description/robots/r2c6_valve.urdf`, root link `r2/right_wrist_yaw`; removed arm joints: r2/right_arm/wrist/yaw
 - 18 joints, 18 actuators (estimated), mass 0.133 kg, 30 collision geoms
+- Self-collision: 25 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 0 by range, 18 by geometry, 0 override
 - capsule collision geoms added on 13 links with no collision geometry
 - 18 joints unlimited or wider than 2*pi; actuator command clamped to +-pi/2
@@ -53,95 +56,114 @@ Assets are generated locally from pinned sources and are not redistributed (CC-B
 ### valkyrie_right (Valkyrie, awesome-humanoid-learning)
 - Source: https://github.com/gkjohnson/nasa-urdf-robots @ `1f89ecba91`, `nasa/val_description/model/robots/forearm_right.urdf`, root link `rightPalm`; removed arm joints: rightWristPitch
 - 13 joints, 13 actuators (estimated), mass 0.890 kg, 14 collision geoms
+- Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 13 by range, 0 by geometry, 0 override
 
 ### talos_right (TALOS, awesome-humanoid-learning)
 - Source: https://github.com/stack-of-tasks/talos-data @ `dc636c94d3`, `talos/urdf/talos_full_v2.urdf`, root link `gripper_right_base_link`; removed arm joints: none
 - 7 joints, 1 actuators (estimated), mass 1.094 kg, 8 collision geoms
+- Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 4 fingers; 4 skipped, penetrating at rest
 - Closing direction: 1 by range, 0 by geometry, 0 override
 
 ### nao_right (NAO, awesome-humanoid-learning)
 - Source: https://github.com/ros-naoqi/nao_robot @ `67476469a1`, `nao/nao_description/urdf/naoV50_generated_urdf/nao.urdf`, root link `r_wrist`; removed arm joints: RWristYaw
 - 9 joints, 1 actuators (estimated), mass 0.185 kg, 19 collision geoms
+- Self-collision: off for this hand (see notes)
 - Closing direction: 0 by range, 0 by geometry, 1 override
 - Meshes are CC-BY-NC-ND behind a click-through installer (nao_meshes); not accepted on the user's behalf.
 - Collision geometry approximated with capsules from the kinematic tree.
+- Self-collision off: the guessed capsules collide where the real hand would not (no pairs: passes; any pairs: fails).
+- Real meshes are non-commercial, so this is a mechanism-only embodiment, not a real-geometry anchor.
 - 78 mesh files missing; their geoms were dropped (e.g. package://nao_meshes/meshes/V40/HeadPitch.dae)
 - capsule collision geoms added on 19 links with no collision geometry
 
 ### romeo_right (Romeo, awesome-humanoid-learning)
 - Source: https://github.com/ros-aldebaran/romeo_robot @ `e53c8f3d70`, `romeo/romeo_description/urdf/romeo_generated_urdf/romeo.urdf`, root link `r_wrist`; removed arm joints: RWristPitch
 - 13 joints, 1 actuators (estimated), mass 0.442 kg, 14 collision geoms
+- Self-collision: 9 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 1 by range, 0 by geometry, 0 override
 - capsule collision geoms added on 1 links with no collision geometry
 
 ### jaxon_right (JAXON, awesome-humanoid-learning)
 - Source: https://github.com/robot-descriptions/jaxon_description @ `4a0cb7a4a7`, `jaxon/urdf/jaxon_jvrc.urdf`, root link `RARM_LINK7`; removed arm joints: RARM_JOINT7
 - 2 joints, 2 actuators (estimated), mass 2.707 kg, 17 collision geoms
+- Self-collision: 3 pairs (fingertip-palm, adjacent fingertips) over 2 fingers
 - Closing direction: 2 by range, 0 by geometry, 0 override
 - Ring-shaped finger meshes: convex hulls fill the grasp space, so collision meshes are CoACD-decomposed.
 
 ### jvrc1_right (JVRC-1, awesome-humanoid-learning)
 - Source: https://github.com/isri-aist/jvrc_mj_description @ `8cfc65f5c5`, `jvrc/xml/jvrc1.xml`, root link `R_WRIST_Y_S`; removed arm joints: R_WRIST_Y
 - 6 joints, 1 actuators (converted_from_motor), mass 1.700 kg, 7 collision geoms
+- Self-collision: 5 pairs (fingertip-palm, adjacent fingertips) over 3 fingers
 - Closing direction: 0 by range, 1 by geometry, 0 override
 
 ### h1_inspire_dfq_right (Unitree H1, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/h1_description/urdf/h1_with_hand.urdf`, root link `R_hand_base_link`; removed arm joints: none
 - 12 joints, 6 actuators (estimated), mass 0.192 kg, 13 collision geoms
+- Self-collision: 10 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 6 by range, 0 by geometry, 0 override
 - Inspire DFQ hand; same hand as unitree_ros g1_description/inspire_hand/DFQ_*.urdf.
 
 ### h1_2_inspire_ftp_right (Unitree H1-2, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/h1_2_description/h1_2.urdf`, root link `R_hand_base_link`; removed arm joints: none
 - 12 joints, 6 actuators (estimated), mass 0.192 kg, 13 collision geoms
+- Self-collision: 10 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 6 by range, 0 by geometry, 0 override
 - Inspire FTP hand. The unitree_rl_gym h1_2.urdf carries the same hand; extracted once.
 
 ### g1_dex3_1_right (Unitree G1, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex3_1/dex3_1_r.urdf`, root link `right_hand_palm_link`; removed arm joints: none
 - 7 joints, 7 actuators (estimated), mass 0.697 kg, 8 collision geoms
+- Self-collision: 3 pairs (fingertip-palm, adjacent fingertips) over 3 fingers
 - Closing direction: 6 by range, 1 by geometry, 0 override
 
 ### g1_dex1_1 (Unitree G1, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex1_1/dex1_1.urdf`, root link `base_link`; removed arm joints: none
 - 2 joints, 2 actuators (estimated), mass 0.193 kg, 7 collision geoms
+- Self-collision: 1 pairs (fingertip-palm, adjacent fingertips) over 2 fingers
 - Closing direction: 0 by range, 2 by geometry, 0 override
 
 ### g1_brainco_right (Unitree G1, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/g1_with_brainco_hand/g1_29dof_mode_15_brainco_hand.urdf`, root link `right_base_link`; removed arm joints: none
 - 16 joints, 11 actuators (estimated), mass 0.385 kg, 17 collision geoms
+- Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 6 by range, 5 by geometry, 0 override
 - 5 joints unlimited or wider than 2*pi; actuator command clamped to +-pi/2
 
 ### unitree_dex5_1_right (Unitree (G1/H2), awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex5_1/Dex5-URDF-R/Dex5-URDF-R.urdf`, root link `base_link00`; removed arm joints: none
 - 20 joints, 20 actuators (estimated), mass 0.979 kg, 21 collision geoms
+- Self-collision: 11 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 15 by range, 5 by geometry, 0 override
 
 ### unitree_dex2_5_right (Unitree (G1/H2), awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex2_5/Right_Hand.urdf`, root link `right_0_link`; removed arm joints: none
 - 10 joints, 10 actuators (estimated), mass 0.365 kg, 11 collision geoms
+- Self-collision: 10 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 10 by range, 0 by geometry, 0 override
 
 ### leap_right (LEAP Hand, menagerie)
 - Source: https://github.com/google-deepmind/mujoco_menagerie @ `f054586a8e`, `menagerie/leap_hand/right_hand.xml`, root link `palm`; removed arm joints: none
 - 16 joints, 16 actuators (source_model), mass 0.746 kg, 71 collision geoms
+- Self-collision: 36 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 12 by range, 4 by geometry, 0 override
 
 ### allegro_right (Wonik Allegro, menagerie)
 - Source: https://github.com/google-deepmind/mujoco_menagerie @ `f054586a8e`, `menagerie/wonik_allegro/right_hand.xml`, root link `palm`; removed arm joints: none
 - 16 joints, 16 actuators (source_model), mass 0.644 kg, 21 collision geoms
+- Self-collision: 9 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 13 by range, 3 by geometry, 0 override
 
 ### shadow_right (Shadow Hand E3M5, menagerie)
 - Source: https://github.com/google-deepmind/mujoco_menagerie @ `f054586a8e`, `menagerie/shadow_hand/right_hand.xml`, root link `rh_palm`; removed arm joints: rh_WRJ1
 - 22 joints, 18 actuators (source_model), mass 0.694 kg, 31 collision geoms
+- Self-collision: 17 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 11 by range, 7 by geometry, 0 override
 
 ### robotiq_2f85 (Robotiq 2F-85, menagerie)
 - Source: https://github.com/google-deepmind/mujoco_menagerie @ `f054586a8e`, `menagerie/robotiq_2f85/2f85.xml`, root link `base_mount`; removed arm joints: none
 - 8 joints, 1 actuators (source_model), mass 1.053 kg, 14 collision geoms
+- Self-collision: 3 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 1 by range, 0 by geometry, 0 override
 
 ## Inspected and skipped
@@ -151,7 +173,8 @@ Assets are generated locally from pinned sources and are not redistributed (CC-B
 | WALK-MAN | Pisa/IIT SoftHand modeled as a rigid mesh on fixed joints (soft_hand.urdf.xacro); no articulated hand. |
 | Atlas DRC v3 (drake models) | Arm ends at the wrist (l/r_arm_lwy); no hand modeled. |
 | Atlas v4 (roboschool) | Arm ends at the wrist (l/r_arm_wry2); no hand modeled. |
-| Digit | No hand joints; no license listed. |
+| Digit | No hand joints; no license listed (not usable commercially anyway). |
+| NAO meshes (nao_meshes) | CC-BY-NC-ND: non-commercial, excluded. NAO is kept with capsule collision geometry. |
 | SigmaBan | No hand joints. |
 | Bolt, Cassie, Spryped, Upkie, Hector, SA01 | Bipeds without arms/hands; excluded by spec. |
 

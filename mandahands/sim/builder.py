@@ -34,6 +34,93 @@ HAND_BITS = dict(contype=2, conaffinity=1)
 OBJ_BITS = dict(contype=1, conaffinity=3)
 
 
+# one contact model for every hand geom (randomized later); source models disagree wildly
+HAND_SOLREF, HAND_SOLIMP = [0.02, 1.0], [0.9, 0.95, 0.001, 0.5, 2.0]
+REACH = 0.01  # m; self-collision pairs that never get closer than this are dropped
+
+
+def add_self_collision(hand: mujoco.MjSpec) -> dict:
+  """Explicit contact pairs: each fingertip vs the palm and vs the fingertips of adjacent fingers.
+
+  Hand geoms otherwise never collide with each other (HAND_BITS). Fingertips are the deepest links with collision geoms;
+  adjacent fingers are each finger's two nearest neighbours by base position on the palm (for a 2-jaw gripper,
+  the other jaw). Pairs already penetrating at the rest pose (overlapping source meshes) are skipped, and so are
+  pairs that never come within REACH of each other over random joint configurations (keeps the count small for
+  hands with many collision geoms).
+  """
+  coll = lambda b: [g for g in b.geoms if g.contype or g.conaffinity]
+  sub = lambda b: [b, *b.find_all(mujoco.mjtObj.mjOBJ_BODY)]
+  # palm: the mount plus every fixed single-child link below it (e.g. Robotiq base_mount -> base)
+  palm = hand.body("hand_mount")
+  palm_geoms = coll(palm)
+  while len(list(palm.bodies)) == 1 and not list(palm.bodies[0].joints):
+    palm = palm.bodies[0]
+    palm_geoms += coll(palm)
+  for b in sub(hand.body("hand_mount")):  # pairs need geom names
+    for i, g in enumerate(coll(b)):
+      g.name = g.name or f"{b.name}_coll{i}"
+
+  # finger = palm child subtree with a joint (skips fixed sensor frames); tips = its leaf bodies with collision geoms
+  fingers = []
+  for base in palm.bodies:
+    if not any(list(b.joints) for b in sub(base)):
+      continue
+    # tip: a link with collision geoms and none below it (Robotiq's pad has a geom-less child)
+    tips = [b for b in sub(base) if coll(b) and not any(coll(c) for c in sub(b)[1:])]
+    if tips:
+      fingers.append((base, tips))
+
+  m = hand.copy().compile()
+  d = mujoco.MjData(m)
+  mujoco.mj_kinematics(m, d)
+  base_pos = np.array([d.xpos[m.body(b.name).id] for b, _ in fingers]).reshape(-1, 3)
+  fromto = np.zeros(6)
+  dist = lambda a, b: mujoco.mj_geomDistance(m, d, m.geom(a).id, m.geom(b).id, REACH, fromto)
+
+  # one geom per tip link: the one farthest from the link's parent (links like LEAP's carry many small boxes)
+  def tip_geom(t):
+    par = d.xpos[m.body(t.parent.name).id]
+    return max(coll(t), key=lambda g: np.linalg.norm(d.geom_xpos[m.geom(g.name).id] - par))
+
+  tip_geoms = [[tip_geom(t) for t in tips] for _, tips in fingers]
+  cand = set()
+  for i, gs in enumerate(tip_geoms):
+    near = np.argsort(np.linalg.norm(base_pos - base_pos[i], axis=1))[1:3]
+    for g in gs:
+      cand |= {tuple(sorted((g.name, pg.name))) for pg in palm_geoms}
+      cand |= {tuple(sorted((g.name, g2.name))) for j in near for g2 in tip_geoms[j]}
+
+  skipped = {k for k in cand if dist(*k) < 0}  # overlapping at rest
+  # reachability: min distance over random joint configurations (FK only, coupling ignored: conservative)
+  rng = np.random.default_rng(0)
+  lo, hi = m.jnt_range[:, 0], m.jnt_range[:, 1]
+  lim = m.jnt_limited.astype(bool) & (hi > lo)
+  reach = {k: dist(*k) for k in cand - skipped}
+  for _ in range(64):
+    d.qpos[:] = np.where(lim, rng.uniform(lo, hi), rng.uniform(-np.pi, np.pi, m.njnt))
+    mujoco.mj_kinematics(m, d)
+    for k in reach:
+      if reach[k] >= REACH:
+        reach[k] = min(reach[k], dist(*k))
+  # plus simulated poses (all actuators low / mid / high), which respect coupling and closed linkages
+  m.opt.gravity[:] = 0
+  m.geom_contype[:], m.geom_conaffinity[:] = 0, 0
+  for f in (0.0, 0.5, 1.0):
+    mujoco.mj_resetData(m, d)
+    d.ctrl[:] = m.actuator_ctrlrange[:, 0] + f * (m.actuator_ctrlrange[:, 1] - m.actuator_ctrlrange[:, 0])
+    for _ in range(250):
+      mujoco.mj_step(m, d)
+    for k in reach:
+      reach[k] = min(reach[k], dist(*k))
+  pairs = sorted(k for k, v in reach.items() if v < REACH)
+  for a, b in pairs:
+    # frictionless: only has to stop interpenetration, and condim 1 is one constraint row per contact
+    hand.add_pair(geomname1=a, geomname2=b, condim=1, solref=HAND_SOLREF, solimp=HAND_SOLIMP)
+
+  return dict(n_pairs=len(pairs), n_fingers=len(fingers), skipped_penetrating=len(skipped),
+              skipped_unreachable=len(cand) - len(skipped) - len(pairs))
+
+
 def simple_hand(cfg: SceneCfg) -> mujoco.MjSpec:
   """Hand-written radial test hand rooted at body 'hand_mount'; fingers hang along -z and curl inward."""
   s = mujoco.MjSpec()
@@ -63,6 +150,7 @@ def simple_hand(cfg: SceneCfg) -> mujoco.MjSpec:
       a.ctrlrange = j.range
       a.ctrllimited = True
       parent, pos = b, [0, 0, -cfg.phalanx_len]
+  add_self_collision(s)
   return s
 
 
@@ -116,7 +204,7 @@ def build_scene(
         g.contype, g.conaffinity = HAND_BITS["contype"], HAND_BITS["conaffinity"]
         # one contact model for every hand (randomized later); sources disagree wildly, e.g. LEAP's
         # solref=1e-4 makes light fingers blow up on contact. Friction stays per hand.
-        g.solref, g.solimp = [0.02, 1.0], [0.9, 0.95, 0.001, 0.5, 2.0]
+        g.solref, g.solimp = HAND_SOLREF, HAND_SOLIMP
         g.margin = g.gap = 0.0
         g.priority, g.solmix = 0, 1.0
 

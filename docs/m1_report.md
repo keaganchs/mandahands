@@ -1,5 +1,45 @@
 # Milestone 1: skeleton and benchmark
 
+## Correction (2026-10-07, found during M2)
+
+**The M1 test hand barely moved.** `MjSpec()` defaults to degrees, so its joint limits of [-0.4, 1.2] and [0, 1.5] rad were read as degrees: about 0.02 rad of travel. The M1 "grasp" was a near-rigid pinch of fingers that already almost touched the box. The benchmark and equivalence numbers below therefore describe a stiffer, more contact-heavy scene than intended. Fixed with `compiler.degree = False` in every MjSpec we build.
+
+Other scene changes since M1 (details in `m2_report.md`): integrator `implicitfast` (was Euler), `impratio` 3 (was 10, confirmed by you), and one standardized contact model for hand geoms.
+
+**Re-run, RTX A5000, njmax=160** (`results/bench_NVIDIA_RTX_A5000.md`):
+
+| nworld | SPS (re-run) | MiB | SPS (original) |
+|---|---|---|---|
+| 256 | 0.59 M | 45 | 0.54 M |
+| 1024 | 1.77 M | 182 | 1.37 M |
+| 4096 | 2.99 M | 726 | 1.97 M |
+| 16384 | 3.35 M | 2904 | 2.13 M |
+| 32768 | 3.38 M | 5809 | 2.13 M |
+| 65536 | 3.37 M | 11617 | 2.12 M |
+
+At 4096 worlds:
+
+| Axis | Values | SPS (re-run) | Notes |
+|---|---|---|---|
+| object convex parts | 1 / 4 / 16 | 2.34 / 1.80 / 1.49 M | |
+| hand DoF | 6 / 12 / 20 | 2.93 / 2.64 / 0.98 M | |
+| solver iterations | 5 / 10 / 20 | 2.94 / 2.95 / 2.95 M | Iteration cap still doesn't affect speed |
+| nconmax | 16 / 32 / 64 | 2.99 / 2.96 / 2.93 M | Memory only |
+
+After M2 added limited self-collision (6 frictionless fingertip pairs on this hand), the plateau is 3.29 M (−3%), and 4096 worlds give 2.90 M; the 20-DoF hand gives 1.22 M.
+
+Without those pairs, the plateau is about 3.4 M physics steps/s, roughly 67k control steps/s at 50 Hz. The closed grasp settles at 6 contacts per world instead of 12, which is the main reason it's faster. No capacity overflow at njmax=160. A new signal: the line search often hits its iteration cap (`LS_ITERATIONS`). That's a convergence flag, not lost constraints. Per your instruction, iterations stay at 10 until there's a real need.
+
+**Equivalence test, revised.** With fingers that actually move, CPU and MJWarp trajectories agree to about 1e-10 until contact onset, then diverge (float32 vs float64 timing of contact events). The test is now two checks:
+1. Free-space trajectory match with the object out of reach: observed 6.5e-7 rad over 2 s, tolerance 1e-5.
+2. Same close-and-lift outcome with contact: both lift the object to 0.1129 m, tolerance 1.5 cm.
+
+Both pass on the 3060 and the A5000.
+
+---
+
+*Original M1 report below, unchanged.*
+
 Stack: `mujoco==3.15.0`, `mujoco-warp==3.15.0`, `warp-lang==1.18.0`, Python 3.12.
 Scene: a floating wrist (free body welded to a mocap target with `solref=(0.02, 1)`), a test hand with 3 fingers × 2 phalanges (6 position actuators), and a 6 cm box on a plane. Elliptic cones, `impratio=10`, `condim=4` on the object, 2 ms timestep.
 

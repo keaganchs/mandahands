@@ -63,3 +63,11 @@ def test_scripted_close_and_lift_test_hand():
   pr, res = grasp_search(simple_hand(SceneCfg()), n_centres=4)
   assert pr["close_rule"] and all(v == "range" for v in pr["close_rule"].values())
   assert any(r["ok"] for r in res)
+
+
+def test_self_collision_pairs_simple_hand():
+  m = simple_hand(SceneCfg()).compile()
+  pairs = {tuple(sorted((m.geom(m.pair_geom1[i]).name, m.geom(m.pair_geom2[i]).name))) for i in range(m.npair)}
+  tips = ["f0_g1", "f1_g1", "f2_g1"]  # distal phalanges only; proximal links never pair
+  assert pairs == {tuple(sorted(("palm", t))) for t in tips} | {tuple(sorted(p)) for p in [tips[:2], tips[1:], tips[::2]]}
+  assert (m.pair_dim == 1).all()  # frictionless
