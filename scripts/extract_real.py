@@ -158,11 +158,13 @@ def report(metas: list[dict]):
     "## Flag legend",
     "",
     "- `actuators_estimated`: URDF has no actuator model; position servos added (kp = effort / quarter range). Randomize widely.",
-    "- `effort_placeholder:N`: URDF effort above 20 Nm (hinge) / 200 N (slide) treated as missing; default 1 Nm / 20 N used.",
+    "- `effort_placeholder:N`: URDF effort above 20 Nm (hinge) / 200 N (slide) treated as missing; default 1 Nm / 20 N per driven joint used.",
     "- `inertia_from_geometry:N`: link inertia was a placeholder (radius of gyration > 10 cm); box estimate from collision geoms.",
-    "- `range_placeholder:N`: joint unlimited or wider than 2 pi; actuator command clamped to +-pi/2.",
+    "- `range_full_rom:N`: hinge joint unlimited or wider than a full turn; given its full range of motion (+-pi), cut only where",
+    "  sweeping it makes the hand clearly intersect itself (> 2 mm new penetration).",
     "- `collision_approximated:N`: link had no collision geometry (missing meshes); capsules from the kinematic tree.",
     "- `actuator_converted_from_motor`: source torque motor turned into a position servo with the motor's peak torque.",
+    "- `damping_placeholder:N`: joint damping too high to reach 3 rad/s at the actuator's effort; set to 10% of effort at 3 rad/s.",
     "- `convex_decomposed:N`: N collision meshes replaced by CoACD convex parts.",
   ]
   REPORT.write_text("\n".join(lines) + "\n")

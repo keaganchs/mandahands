@@ -50,7 +50,9 @@ def test_extract_toy_urdf(tmp_path, monkeypatch):
   assert [a["target"] for a in meta["actuators"]] == ["f1_j"]  # follower gets no actuator
   assert meta["coupling"] == [dict(follower="f2_j", leader="f1_j", polycoef=[0.0, 0.5, 0.0, 0.0, 0.0])]
   assert "effort_placeholder:1" in meta["flags"] and "inertia_from_geometry:1" in meta["flags"]
-  assert meta["actuators"][0]["effort"] == ex.DEFAULT_EFFORT[mujoco.mjtJoint.mjJNT_HINGE] and meta["actuators"][0]["velocity"] == 3.0
+  # placeholder effort replaced by the default per driven joint (f1_j also drives its mimic follower f2_j)
+  assert meta["actuators"][0]["effort"] == 2 * ex.DEFAULT_EFFORT[mujoco.mjtJoint.mjJNT_HINGE] and meta["actuators"][0]["velocity"] == 3.0
+  assert (m.actuator_forcerange[0] == [-meta["actuators"][0]["effort"], meta["actuators"][0]["effort"]]).all()
   # f1's placeholder inertia replaced by a plausible one
   f1 = m.body("f1").id
   assert np.sqrt(m.body_inertia[f1].max() / m.body_mass[f1]) < ex.MAX_GYRATION
@@ -71,3 +73,21 @@ def test_self_collision_pairs_simple_hand():
   tips = ["f0_g1", "f1_g1", "f2_g1"]  # distal phalanges only; proximal links never pair
   assert pairs == {tuple(sorted(("palm", t))) for t in tips} | {tuple(sorted(p)) for p in [tips[:2], tips[1:], tips[::2]]}
   assert (m.pair_dim == 1).all()  # frictionless
+
+
+def test_unlimited_joint_gets_full_rom_cut_by_self_intersection():
+  s = mujoco.MjSpec()
+  s.compiler.degree = False
+  mount = s.worldbody.add_body(name="hand_mount")
+  mount.add_geom(name="palm", type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.03, 0.03, 0.01])
+  # finger hinged at the palm's bottom face; folding it up by ~90 deg drives it into the palm
+  f = mount.add_body(name="f", pos=[0.02, 0, -0.01])
+  free = f.add_joint(name="free_j", type=mujoco.mjtJoint.mjJNT_HINGE, axis=[1, 0, 0])
+  f.add_geom(type=mujoco.mjtGeom.mjGEOM_CAPSULE, size=[0.005, 0, 0], fromto=[0, 0, 0, 0, 0, -0.04])
+  # a link far from everything: nothing to hit, keeps the full +-pi
+  g = mount.add_body(name="g", pos=[0.2, 0, 0])
+  lone = g.add_joint(name="lone_j", type=mujoco.mjtJoint.mjJNT_HINGE, axis=[1, 0, 0])
+  g.add_geom(type=mujoco.mjtGeom.mjGEOM_CAPSULE, size=[0.005, 0, 0], fromto=[0, 0, 0, 0, 0, -0.04])
+  rom = ex._resolve_ranges(s, [free, lone])
+  assert 1.2 < -rom["free_j"][0] < 2.0 and 1.2 < rom["free_j"][1] < 2.0, rom
+  assert rom["lone_j"] == [-np.pi, np.pi]

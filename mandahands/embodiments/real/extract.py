@@ -17,6 +17,7 @@ OUT = Path("data/real_hands")
 DEFAULT_EFFORT = {mujoco.mjtJoint.mjJNT_HINGE: 1.0, mujoco.mjtJoint.mjJNT_SLIDE: 20.0}  # Nm / N, when the source has none
 MAX_EFFORT = {mujoco.mjtJoint.mjJNT_HINGE: 20.0, mujoco.mjtJoint.mjJNT_SLIDE: 200.0}  # above this: a placeholder
 MAX_GYRATION = 0.1  # m; a hand link with a larger radius of gyration has placeholder inertia
+MIN_SPEED = 3.0  # rad/s; a finger joint that can't reach this at full effort has placeholder damping
 MIN_ARMATURE = 1e-4  # URDFs carry no rotor inertia; tiny finger links are unstable at 2 ms without some
 
 
@@ -71,18 +72,86 @@ def _decompose(spec: mujoco.MjSpec, bodies) -> int:
 
 
 def _servo(a, j, effort: float):
-  """Position servo with full effort at a quarter-range error. Gains are guesses; flagged in metadata."""
-  # unlimited, or wider than a full turn (placeholder, e.g. R2's +-4 rad): command within +-pi/2
-  placeholder = not (j.range[0] < j.range[1] and j.range[1] - j.range[0] <= 2 * np.pi)
-  rng = [-np.pi / 2, np.pi / 2] if placeholder else list(j.range)
+  """Position servo over the joint's range with full effort at a quarter-range error. Gains are guesses; flagged."""
+  rng = list(j.range)
   kp = effort / max(0.25 * (rng[1] - rng[0]), 1e-3)
   a.set_to_position(kp=kp, kv=0.05 * kp)
   a.gear = [1, 0, 0, 0, 0, 0]
   a.ctrllimited = mujoco.mjtLimited.mjLIMITED_TRUE
   a.ctrlrange = rng
-  return placeholder
   a.forcelimited = mujoco.mjtLimited.mjLIMITED_TRUE
   a.forcerange = [-effort, effort]
+
+
+ROM_STEP = 0.05  # rad
+ROM_TOL = 0.002  # m of new penetration that counts as the hand clearly intersecting itself
+
+
+def _resolve_ranges(spec: mujoco.MjSpec, joints) -> dict[str, list[float]]:
+  """Hinge joints with no usable range (unlimited, or wider than a full turn, e.g. R2's +-4 rad) get their full
+  range of motion: +-pi, cut only where sweeping the joint (others at 0) makes the links it moves penetrate another
+  part of the hand by more than ROM_TOL beyond what they already do at 0. Returns joint -> new range."""
+  todo = [j for j in joints if j.type == mujoco.mjtJoint.mjJNT_HINGE
+          and not (j.range[0] < j.range[1] and j.range[1] - j.range[0] <= 2 * np.pi)]
+  if not todo:
+    return {}
+  probe = spec.copy()
+  ball = probe.worldbody.add_body(name="_rom_probe", mocap=True)  # added last: hand ids unchanged
+  ball.add_geom(name="_rom_probe_g", type=mujoco.mjtGeom.mjGEOM_SPHERE, size=[1e-4, 0, 0], contype=0, conaffinity=0)
+  m = probe.compile()
+  d = mujoco.MjData(m)
+  pg = m.geom("_rom_probe_g").id
+  coll = [g for g in range(m.ngeom) if m.geom_contype[g] or m.geom_conaffinity[g]]
+  fromto = np.zeros(6)
+  out = {}
+  for j in todo:
+    jid = m.joint(j.name).id
+    moving = {jid_b for jid_b in range(m.nbody) if _is_desc(m, jid_b, m.jnt_bodyid[jid])}
+    pairs = [(a, b) for a in coll if m.geom_bodyid[a] in moving for b in coll if m.geom_bodyid[b] not in moving]
+    still = [b for b in coll if m.geom_bodyid[b] not in moving]
+    mov = [a for a in coll if m.geom_bodyid[a] in moving]
+
+    def dist():
+      # surface penetration between moving and still geoms (saturates at a shared joint, where neighbouring
+      # links already overlap), plus points of the moving links (geom centres, capsule/cylinder ends) entering
+      # still geoms (catches a link folding back through its parent)
+      dd = [mujoco.mj_geomDistance(m, d, a, b, 0.05, fromto) for a, b in pairs]
+      for a in mov:
+        pts = [d.geom_xpos[a]]
+        if m.geom_type[a] in (mujoco.mjtGeom.mjGEOM_CAPSULE, mujoco.mjtGeom.mjGEOM_CYLINDER):
+          ax = d.geom_xmat[a].reshape(3, 3)[:, 2] * m.geom_size[a, 1]
+          pts += [d.geom_xpos[a] + ax, d.geom_xpos[a] - ax]
+        for p in pts:
+          d.mocap_pos[0] = p
+          mujoco.mj_kinematics(m, d)
+          dd += [mujoco.mj_geomDistance(m, d, pg, b, 0.05, fromto) for b in still]
+      return np.array(dd)
+
+    mujoco.mj_resetData(m, d)
+    mujoco.mj_kinematics(m, d)
+    d0 = np.minimum(dist(), 0.0)
+    lim = []
+    for sign in (-1, 1):
+      q = 0.0
+      while q + ROM_STEP <= np.pi:
+        d.qpos[m.jnt_qposadr[jid]] = sign * (q + ROM_STEP)
+        mujoco.mj_kinematics(m, d)
+        if (dist() < d0 - ROM_TOL).any():
+          break
+        q += ROM_STEP
+      lim.append(sign * q if q + ROM_STEP <= np.pi else sign * np.pi)
+    out[j.name] = lim
+    j.range = lim
+    j.limited = mujoco.mjtLimited.mjLIMITED_TRUE
+  return out
+
+
+def _is_desc(m, b, root) -> bool:
+  while b > 0:
+    if b == root:
+      return True
+    b = m.body_parentid[b]
+  return b == root
 
 
 def _box_inertial(m: mujoco.MjModel, i: int, b) -> None:
@@ -161,6 +230,16 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
     n = _decompose(spec, bodies)
     flags.append(f"convex_decomposed:{n}")
 
+  rom = _resolve_ranges(spec, [j for j in joints if j.name not in follower])  # followers move with their leader
+  if rom:
+    cut = sum(1 for r in rom.values() if min(-r[0], r[1]) < np.pi - 1e-9)
+    flags.append(f"range_full_rom:{len(rom)}")
+    notes.append(f"{len(rom)} hinge joints had no usable range (unlimited or wider than a full turn): full range of motion "
+                 f"+-pi, cut by a self-intersection sweep on {cut} of them")
+
+  # missing effort: the default per joint, times the joints the actuator drives through coupling
+  default_effort = lambda j: DEFAULT_EFFORT[j.type] * (1 + sum(l == j.name for l, _ in follower.values()))
+
   # actuators: keep the source model's (MJCF); otherwise a position servo per independent joint
   act_meta = []
   if driven or tendon_driven:
@@ -169,14 +248,16 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
       if a.trntype == mujoco.mjtTrn.mjTRN_JOINT and a.biastype == mujoco.mjtBias.mjBIAS_NONE:
         # torque motor: the policy commands positions, so turn it into a servo with the motor's peak torque
         j = spec.joint(a.target)
-        effort = float(np.abs(a.ctrlrange).max() * a.gear[0]) or max(j.actfrcrange[1], 0.0) or DEFAULT_EFFORT[j.type]
+        effort = float(np.abs(a.ctrlrange).max() * a.gear[0]) or max(j.actfrcrange[1], 0.0) or default_effort(j)
         _servo(a, j, effort)
         origin = "converted_from_motor"
         flags.append("actuator_converted_from_motor")
+        act_meta.append(dict(name=a.name, target=a.target, origin=origin, effort=effort))
+        continue
       act_meta.append(dict(name=a.name, target=a.target, origin=origin))
   else:
     flags.append("actuators_estimated")
-    placeholder_effort, placeholder_range = [], []
+    placeholder_effort = []
     for j in joints:
       if j.name in follower:
         continue
@@ -184,15 +265,11 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
       if lim > MAX_EFFORT[j.type]:
         lim = 0.0
         placeholder_effort.append(j.name)
-      effort = lim or DEFAULT_EFFORT[j.type]
+      effort = lim or default_effort(j)
       a = spec.add_actuator(name=f"{j.name}_pos", target=j.name, trntype=mujoco.mjtTrn.mjTRN_JOINT)
-      if _servo(a, j, effort):
-        placeholder_range.append(j.name)
+      _servo(a, j, effort)
       act_meta.append(dict(name=a.name, target=j.name, origin="estimated", effort=effort,
                            effort_source="urdf" if lim else "default", velocity=urdf_vel.get(j.name, 0.0)))
-    if placeholder_range:
-      flags.append(f"range_placeholder:{len(placeholder_range)}")
-      notes.append(f"{len(placeholder_range)} joints unlimited or wider than 2*pi; actuator command clamped to +-pi/2")
     if placeholder_effort:
       flags.append(f"effort_placeholder:{len(placeholder_effort)}")
       notes.append(f"{len(placeholder_effort)} URDF effort limits above {MAX_EFFORT[mujoco.mjtJoint.mjJNT_HINGE]} Nm treated as placeholders")
@@ -213,6 +290,23 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
   for j in joints:
     if j.armature < MIN_ARMATURE:
       j.armature = MIN_ARMATURE
+
+  # placeholder damping (e.g. iCub's 1 Nm s/rad on every finger joint): the joint could not reach MIN_SPEED at its
+  # actuator's effort. Replace with damping that costs 10% of the effort at MIN_SPEED.
+  effort_of = {a["target"]: a["effort"] for a in act_meta if "effort" in a}
+  for f, (l, _) in follower.items():
+    if l in effort_of:
+      effort_of[f] = effort_of[l]
+  damped = []
+  for j in joints:
+    e = effort_of.get(j.name)
+    if e and j.damping[0] * MIN_SPEED > e:
+      j.damping = [0.1 * e / MIN_SPEED, 0, 0]
+      damped.append(j.name)
+  if damped:
+    flags.append(f"damping_placeholder:{len(damped)}")
+    notes.append(f"{len(damped)} joints had damping too high to move at {MIN_SPEED} rad/s with their actuator's effort; "
+                 f"set to 10% of the effort at that speed")
 
   self_collision = add_self_collision(spec)
   # (after actuators: it simulates the hand closing)

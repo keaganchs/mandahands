@@ -12,20 +12,20 @@ Every included source license allows commercial use; obligations are listed per 
 
 | id | robot | license | commercial use | joints | actuators | coupling | self-coll. pairs | grasp pass | best trial | flags |
 |---|---|---|---|---|---|---|---|---|---|---|
-| icub_mk3_left | iCub | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 11 | 11 | - | 5 | PASS 10/54 | box r=12 mm, drift 7 mm | actuators_estimated, effort_placeholder:11, inertia_from_geometry:10 |
-| r2_right | Robonaut 2 | NASA-1.3 | yes (notice; modifications must be disclosed) | 18 | 18 | - | 25 | PASS 5/48 | box r=3 mm, drift 2 mm | collision_approximated:13, actuators_estimated, range_placeholder:18, effort_placeholder:18, inertia_from_geometry:28 |
+| icub_mk3_left | iCub | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 11 | 11 | - | 8 | PASS 17/54 | cylinder r=10 mm, drift 2 mm | actuators_estimated, effort_placeholder:11, inertia_from_geometry:10, damping_placeholder:11 |
+| r2_right | Robonaut 2 | NASA-1.3 | yes (notice; modifications must be disclosed) | 18 | 18 | - | 15 | PASS 8/48 | sphere r=17 mm, drift 1 mm | collision_approximated:13, range_full_rom:18, actuators_estimated, effort_placeholder:18, inertia_from_geometry:28 |
 | valkyrie_right | Valkyrie | NASA-1.3 | yes (notice; modifications must be disclosed) | 13 | 13 | - | 6 | PASS 2/36 | box r=4 mm, drift 5 mm | actuators_estimated |
-| talos_right | TALOS | LGPL-3.0 | yes (LGPL terms on modified model files) | 7 | 1 | 6 mimic eq | 6 | PASS 35/51 | box r=11 mm, drift 1 mm | actuators_estimated |
+| talos_right | TALOS | LGPL-3.0 | yes (LGPL terms on modified model files) | 7 | 1 | 6 mimic eq | 6 | PASS 40/54 | box r=11 mm, drift 0 mm | actuators_estimated, damping_placeholder:1 |
 | romeo_right | Romeo | BSD-3-Clause | yes | 13 | 1 | 12 mimic eq | 9 | PASS 15/45 | box r=8 mm, drift 0 mm | collision_approximated:1, actuators_estimated |
 | jaxon_right | JAXON | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 2 | 2 | - | 3 | PASS 23/39 | cylinder r=13 mm, drift 1 mm | convex_decomposed:3, actuators_estimated |
-| jvrc1_right | JVRC-1 | BSD-2-Clause | yes | 6 | 1 | 5 mimic eq | 5 | PASS 3/42 | sphere r=30 mm, drift 8 mm | actuator_converted_from_motor |
+| jvrc1_right | JVRC-1 | BSD-2-Clause | yes | 6 | 1 | 5 mimic eq | 5 | PASS 5/48 | box r=20 mm, drift 1 mm | actuator_converted_from_motor |
 | h1_inspire_dfq_right | Unitree H1 | BSD-3-Clause | yes | 12 | 6 | 6 mimic eq | 10 | PASS 18/51 | box r=6 mm, drift 0 mm | actuators_estimated |
 | h1_2_inspire_ftp_right | Unitree H1-2 | BSD-3-Clause | yes | 12 | 6 | 6 mimic eq | 10 | PASS 11/51 | box r=27 mm, drift 1 mm | actuators_estimated |
-| g1_dex3_1_right | Unitree G1 | BSD-3-Clause | yes | 7 | 7 | - | 3 | PASS 15/51 | box r=5 mm, drift 1 mm | actuators_estimated |
+| g1_dex3_1_right | Unitree G1 | BSD-3-Clause | yes | 7 | 7 | - | 3 | PASS 16/51 | box r=37 mm, drift 2 mm | actuators_estimated |
 | g1_dex1_1 | Unitree G1 | BSD-3-Clause | yes | 2 | 2 | - | 1 | PASS 35/48 | box r=25 mm, drift 1 mm | actuators_estimated |
-| g1_brainco_right | Unitree G1 | BSD-3-Clause | yes | 16 | 11 | 5 mimic eq | 6 | PASS 14/39 | box r=11 mm, drift 1 mm | actuators_estimated, range_placeholder:5 |
-| unitree_dex5_1_right | Unitree (G1/H2) | BSD-3-Clause | yes | 20 | 20 | - | 11 | PASS 11/51 | box r=12 mm, drift 2 mm | actuators_estimated |
-| unitree_dex2_5_right | Unitree (G1/H2) | BSD-3-Clause | yes | 10 | 10 | - | 10 | PASS 20/51 | box r=7 mm, drift 0 mm | actuators_estimated |
+| g1_brainco_right | Unitree G1 | BSD-3-Clause | yes | 16 | 11 | 5 mimic eq | 6 | PASS 14/39 | box r=11 mm, drift 1 mm | range_full_rom:5, actuators_estimated |
+| unitree_dex5_1_right | Unitree (G1/H2) | BSD-3-Clause | yes | 20 | 20 | - | 11 | PASS 12/51 | box r=12 mm, drift 2 mm | actuators_estimated |
+| unitree_dex2_5_right | Unitree (G1/H2) | BSD-3-Clause | yes | 10 | 10 | - | 10 | PASS 16/48 | cylinder r=9 mm, drift 0 mm | actuators_estimated |
 | leap_right | LEAP Hand | MIT | yes | 16 | 16 | - | 36 | PASS 14/36 | box r=18 mm, drift 1 mm | - |
 | allegro_right | Wonik Allegro | BSD-2-Clause | yes | 16 | 16 | - | 9 | PASS 17/51 | sphere r=9 mm, drift 1 mm | - |
 | shadow_right | Shadow Hand E3M5 | Apache-2.0 | yes (notice) | 22 | 18 | 4 tendon act | 17 | PASS 18/54 | cylinder r=6 mm, drift 0 mm | - |
@@ -36,20 +36,21 @@ Every included source license allows commercial use; obligations are listed per 
 ### icub_mk3_left (iCub, awesome-humanoid-learning)
 - Source: https://github.com/robotology/icub-models @ `dca8c618c2`, `icub/iCub/robots/left_hand_mk3/model.urdf`, root link `l_hand_palm_link`; removed arm joints: none
 - 11 joints, 11 actuators (estimated), mass 0.190 kg, 12 collision geoms
-- Self-collision: 5 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
+- Self-collision: 8 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
 - Closing direction: 11 by range, 0 by geometry, 0 override
 - Only a left-hand mk3 model exists. Full iCub robot URDFs in this repo have no finger joints.
 - Real hand is tendon-coupled; URDF has no mimic/coupling, so joints are modeled independently.
 - 11 URDF effort limits above 20.0 Nm treated as placeholders
 - 10 links had implausible inertia (radius of gyration > 0.1 m); mass/inertia recomputed from collision geoms
+- 11 joints had damping too high to move at 3.0 rad/s with their actuator's effort; set to 10% of the effort at that speed
 
 ### r2_right (Robonaut 2, awesome-humanoid-learning)
 - Source: https://github.com/gkjohnson/nasa-urdf-robots @ `1f89ecba91`, `nasa/r2_description/robots/r2c6_valve.urdf`, root link `r2/right_wrist_yaw`; removed arm joints: r2/right_arm/wrist/yaw
 - 18 joints, 18 actuators (estimated), mass 0.133 kg, 30 collision geoms
-- Self-collision: 25 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
-- Closing direction: 0 by range, 18 by geometry, 0 override
+- Self-collision: 15 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
+- Closing direction: 3 by range, 15 by geometry, 0 override
 - capsule collision geoms added on 13 links with no collision geometry
-- 18 joints unlimited or wider than 2*pi; actuator command clamped to +-pi/2
+- 18 hinge joints had no usable range (unlimited or wider than a full turn): full range of motion +-pi, cut by a self-intersection sweep on 18 of them
 - 18 URDF effort limits above 20.0 Nm treated as placeholders
 - 28 links had implausible inertia (radius of gyration > 0.1 m); mass/inertia recomputed from collision geoms
 
@@ -64,6 +65,7 @@ Every included source license allows commercial use; obligations are listed per 
 - 7 joints, 1 actuators (estimated), mass 1.094 kg, 8 collision geoms
 - Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 4 fingers; 4 skipped, penetrating at rest
 - Closing direction: 1 by range, 0 by geometry, 0 override
+- 1 joints had damping too high to move at 3.0 rad/s with their actuator's effort; set to 10% of the effort at that speed
 
 ### romeo_right (Romeo, awesome-humanoid-learning)
 - Source: https://github.com/ros-aldebaran/romeo_robot @ `e53c8f3d70`, `romeo/romeo_description/urdf/romeo_generated_urdf/romeo.urdf`, root link `r_wrist`; removed arm joints: RWristPitch
@@ -116,7 +118,7 @@ Every included source license allows commercial use; obligations are listed per 
 - 16 joints, 11 actuators (estimated), mass 0.385 kg, 17 collision geoms
 - Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 6 by range, 5 by geometry, 0 override
-- 5 joints unlimited or wider than 2*pi; actuator command clamped to +-pi/2
+- 5 hinge joints had no usable range (unlimited or wider than a full turn): full range of motion +-pi, cut by a self-intersection sweep on 0 of them
 
 ### unitree_dex5_1_right (Unitree (G1/H2), awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex5_1/Dex5-URDF-R/Dex5-URDF-R.urdf`, root link `base_link00`; removed arm joints: none
@@ -169,9 +171,11 @@ Every included source license allows commercial use; obligations are listed per 
 ## Flag legend
 
 - `actuators_estimated`: URDF has no actuator model; position servos added (kp = effort / quarter range). Randomize widely.
-- `effort_placeholder:N`: URDF effort above 20 Nm (hinge) / 200 N (slide) treated as missing; default 1 Nm / 20 N used.
+- `effort_placeholder:N`: URDF effort above 20 Nm (hinge) / 200 N (slide) treated as missing; default 1 Nm / 20 N per driven joint used.
 - `inertia_from_geometry:N`: link inertia was a placeholder (radius of gyration > 10 cm); box estimate from collision geoms.
-- `range_placeholder:N`: joint unlimited or wider than 2 pi; actuator command clamped to +-pi/2.
+- `range_full_rom:N`: hinge joint unlimited or wider than a full turn; given its full range of motion (+-pi), cut only where
+  sweeping it makes the hand clearly intersect itself (> 2 mm new penetration).
 - `collision_approximated:N`: link had no collision geometry (missing meshes); capsules from the kinematic tree.
 - `actuator_converted_from_motor`: source torque motor turned into a position servo with the motor's peak torque.
+- `damping_placeholder:N`: joint damping too high to reach 3 rad/s at the actuator's effort; set to 10% of effort at 3 rad/s.
 - `convex_decomposed:N`: N collision meshes replaced by CoACD convex parts.
