@@ -80,3 +80,4 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
 1. Self-collision: kept as is.
 2. NAO: dropped. 18 real hands remain.
 3. M3 changed the scripted close-and-lift (contact-stop closing, pinch candidates, BADQACC fails a trial). The M2 search was re-run: all 18 hands still pass; per-hand counts in `real_hands_report.md` are current, the counts quoted above are from M2.
+4. M3 review (2026-10-08) changed extraction: unspecified joint ranges get the full range of motion (cut only by a self-intersection sweep) instead of a ±π/2 clamp; force limits on estimated/converted servos now apply (they were dead code); placeholder damping is sanitized; zero-width URDF limits are fixed joints (BrainCo: 11 joints / 6 actuators, was 16 / 11). Details in `m3_report.md`.

@@ -74,6 +74,14 @@ def load_urdf(path: Path, packages: dict[str, Path]) -> tuple[mujoco.MjSpec, lis
     robot.remove(ext)
   ET.SubElement(ET.SubElement(robot, "mujoco"), "compiler",
                 strippath="false", fusestatic="false", discardvisual="true", balanceinertia="true")
+  # lower == upper (e.g. BrainCo's fingertip frames) means fixed; MuJoCo's importer would turn it into a hinge
+  # with range [0, 0], indistinguishable from a continuous (unlimited) joint
+  zero = [j for j in robot.iter("joint") if j.get("type") in ("revolute", "prismatic") and j.find("limit") is not None
+          and float(j.find("limit").get("lower", 0)) == float(j.find("limit").get("upper", 0))]
+  for j in zero:
+    j.set("type", "fixed")
+  if zero:
+    notes.append(f"{len(zero)} joints with lower == upper limits made fixed (e.g. {zero[0].get('name')})")
   vel = {j.get("name"): float(j.find("limit").get("velocity", 0) or 0)
          for j in robot.iter("joint") if j.find("limit") is not None}
   return mujoco.MjSpec.from_string(ET.tostring(robot, encoding="unicode")), notes, vel

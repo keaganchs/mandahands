@@ -23,7 +23,7 @@ Every included source license allows commercial use; obligations are listed per 
 | h1_2_inspire_ftp_right | Unitree H1-2 | BSD-3-Clause | yes | 12 | 6 | 6 mimic eq | 10 | PASS 11/51 | box r=27 mm, drift 1 mm | actuators_estimated |
 | g1_dex3_1_right | Unitree G1 | BSD-3-Clause | yes | 7 | 7 | - | 3 | PASS 16/51 | box r=37 mm, drift 2 mm | actuators_estimated |
 | g1_dex1_1 | Unitree G1 | BSD-3-Clause | yes | 2 | 2 | - | 1 | PASS 35/48 | box r=25 mm, drift 1 mm | actuators_estimated |
-| g1_brainco_right | Unitree G1 | BSD-3-Clause | yes | 16 | 11 | 5 mimic eq | 6 | PASS 14/39 | box r=11 mm, drift 1 mm | range_full_rom:5, actuators_estimated |
+| g1_brainco_right | Unitree G1 | BSD-3-Clause | yes | 11 | 6 | 5 mimic eq | 4 | PASS 14/39 | box r=5 mm, drift 0 mm | actuators_estimated |
 | unitree_dex5_1_right | Unitree (G1/H2) | BSD-3-Clause | yes | 20 | 20 | - | 11 | PASS 12/51 | box r=12 mm, drift 2 mm | actuators_estimated |
 | unitree_dex2_5_right | Unitree (G1/H2) | BSD-3-Clause | yes | 10 | 10 | - | 10 | PASS 16/48 | cylinder r=9 mm, drift 0 mm | actuators_estimated |
 | leap_right | LEAP Hand | MIT | yes | 16 | 16 | - | 36 | PASS 14/36 | box r=18 mm, drift 1 mm | - |
@@ -115,10 +115,10 @@ Every included source license allows commercial use; obligations are listed per 
 
 ### g1_brainco_right (Unitree G1, awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/g1_with_brainco_hand/g1_29dof_mode_15_brainco_hand.urdf`, root link `right_base_link`; removed arm joints: none
-- 16 joints, 11 actuators (estimated), mass 0.385 kg, 17 collision geoms
-- Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
-- Closing direction: 6 by range, 5 by geometry, 0 override
-- 5 hinge joints had no usable range (unlimited or wider than a full turn): full range of motion +-pi, cut by a self-intersection sweep on 0 of them
+- 11 joints, 6 actuators (estimated), mass 0.385 kg, 17 collision geoms
+- Self-collision: 4 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
+- Closing direction: 6 by range, 0 by geometry, 0 override
+- 10 joints with lower == upper limits made fixed (e.g. left_thumb_tip_joint)
 
 ### unitree_dex5_1_right (Unitree (G1/H2), awesome-humanoid-learning)
 - Source: https://github.com/unitreerobotics/unitree_ros @ `5994d4faef`, `unitree_ros/robots/dexterous_hand_description/dex5_1/Dex5-URDF-R/Dex5-URDF-R.urdf`, root link `base_link00`; removed arm joints: none

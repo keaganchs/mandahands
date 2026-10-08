@@ -22,6 +22,9 @@ URDF = """<robot name="toy">
     <inertial><mass value="0.01"/><inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/></inertial>
     <collision><geometry><box size="0.01 0.01 0.04"/></geometry></collision>
   </link>
+  <link name="tip_frame"><inertial><mass value="0.001"/><inertia ixx="1e-8" iyy="1e-8" izz="1e-8" ixy="0" ixz="0" iyz="0"/></inertial></link>
+  <joint name="tip_j" type="revolute"><parent link="f2"/><child link="tip_frame"/><origin xyz="0 0 -0.04"/><axis xyz="0 1 0"/>
+    <limit lower="0" upper="0" effort="0" velocity="0"/></joint>
   <joint name="arm_j" type="revolute"><parent link="arm"/><child link="palm"/><axis xyz="0 0 1"/>
     <limit lower="-1" upper="1" effort="10" velocity="1"/></joint>
   <joint name="f1_j" type="revolute"><parent link="palm"/><child link="f1"/><origin xyz="0 0 -0.02"/><axis xyz="0 1 0"/>
@@ -46,7 +49,7 @@ def test_extract_toy_urdf(tmp_path, monkeypatch):
   m = spec.compile()
 
   assert meta["removed_arm_joints"] == ["arm_j"]
-  assert meta["joints"] == ["f1_j", "f2_j"]
+  assert meta["joints"] == ["f1_j", "f2_j"]  # tip_j (lower == upper) is a fixed frame, not a joint
   assert [a["target"] for a in meta["actuators"]] == ["f1_j"]  # follower gets no actuator
   assert meta["coupling"] == [dict(follower="f2_j", leader="f1_j", polycoef=[0.0, 0.5, 0.0, 0.0, 0.0])]
   assert "effort_placeholder:1" in meta["flags"] and "inertia_from_geometry:1" in meta["flags"]
