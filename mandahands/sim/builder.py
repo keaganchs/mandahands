@@ -160,6 +160,8 @@ def build_scene(
   wrist_pos=None,
   wrist_quat=(1.0, 0.0, 0.0, 0.0),
   obj_pos=None,
+  obj_parts: list[dict] | None = None,
+  obj_density: float = 500.0,
 ) -> mujoco.MjSpec:
   """Scene with `hand` (an MjSpec rooted at body 'hand_mount') mounted on the floating wrist.
 
@@ -216,8 +218,12 @@ def build_scene(
     name="object_support", type=mujoco.mjtEq.mjEQ_WELD, objtype=mujoco.mjtObj.mjOBJ_BODY,
     name1="object", data=[0.0] * 10 + [1.0], active=False,
   )
-  common = dict(condim=cfg.condim, friction=[1.0, 0.01, 0.0001], density=500, **OBJ_BITS)
-  if cfg.obj == "box":
+  common = dict(condim=cfg.condim, friction=[1.0, 0.01, 0.0001], density=obj_density, **OBJ_BITS)
+  if obj_parts is not None:  # library object (mandahands/objects): union of convex parts
+    from mandahands.objects.parts import add_to_body
+
+    add_to_body(s, obj, obj_parts, **common)
+  elif cfg.obj == "box":
     obj.add_geom(name="obj_g0", type=mujoco.mjtGeom.mjGEOM_BOX, size=[h, h, h], **common)
   elif cfg.obj == "sphere":
     obj.add_geom(name="obj_g0", type=mujoco.mjtGeom.mjGEOM_SPHERE, size=[h, 0, 0], **common)

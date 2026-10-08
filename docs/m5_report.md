@@ -18,7 +18,7 @@ Raw results: `results/bench_groups_<gpu>.{json,md}` (local, gitignored).
 - **Setup:** RTX 3060 Laptop, 8400 worlds in total. Every world holds a 12 mm sphere in a closed grasp, with the object on its support weld.
 - **Stepping:** the control step is 10 × 2 ms, synchronized every control step (the policy reads the state). Groups are GENHAND topology classes from the train split, up to 4 variants each.
 - **Capacity:** no contact-capacity overflow anywhere (njmax 400). Peak memory 2.8 GiB.
-- **Not yet on the cluster GPU:** `pink_server` was unreachable ("No route to host") during this milestone. The same command with `--worlds 16800` will fill in the A5000 numbers. The A5000 sits about 2× higher in M1, and bigger groups should shrink the per-group overhead.
+- **RTX A5000** (`pink_server`, 16800 worlds, run during M6): 1 group 2.01 M (range 0.93–3.29 M); 10 groups 1.43 M sequential, **2.09 M** with streams; 100 groups 0.26 M sequential, **1.02 M** with streams; superset 1.56 M. No overflow; peak memory 5.5 GiB. Full table: `results/bench_groups_NVIDIA_RTX_A5000.md`.
 
 ## What was built
 
@@ -78,10 +78,11 @@ Raw results: `results/bench_groups_<gpu>.{json,md}` (local, gitignored).
 |---|---|---|---|---|---|---|---|
 | RTX 3060 Laptop | A | 8400 | 16 | **0.78 M** | 865 | 23 | 12 |
 | RTX 3060 Laptop | C | 8400 | 142 (every train class) | 0.38 M | 701 | 52 | – |
-| RTX A5000 | A / C | 16800, 50400 | | **not run**: see below | | | |
+| RTX A5000 | A | 16800 | 16 | **1.82 M** | 1730 | 226 (cold cache) | 47 (cold) |
+| RTX A5000 | C | 16800 | 142 | 0.81 M | 1432 | 152 | – |
+| RTX A5000 | A | 50400 | 16 | **2.00 M** | 5191 | 9 (warm cache) | 5 (warm) |
+| RTX A5000 | C | 50400 | 142 | 1.15 M | 4318 | 42 | – |
 
 - **Cost of a rotation:** "rotate s" is one rotation, mostly building scenes for classes not yet cached (cold cache here). Rotating every few minutes of training costs little.
 - **Memory:** A's peak includes building the next rotation while the previous one is still allocated.
-- **A5000 not tested.** `pink_server` is back online, but its NVIDIA driver isn't loaded. The machine rebooted at 12:07 today into kernel 7.0.0-34 (it ran 7.0.0-31 before). There's no NVIDIA kernel module for the new kernel (no DKMS build, no `/dev/nvidia*`), so `nvidia-smi` fails.
-  - Fixing it needs root: rebuild or reinstall the driver for 7.0.0-34, or boot 7.0.0-31.
-  - Then run `python scripts/bench_rotation.py --worlds 16800 50400` and `python scripts/bench_groups.py --worlds 16800`.
+- **A5000 confirms A** (run during M6, after the driver was fixed by a reboot into kernel 7.0.0-38): A is 2.2× faster than C at 16800 worlds and 1.7× at 50400, for about 20% more memory. No capacity overflow in any run.
