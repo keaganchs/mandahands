@@ -15,7 +15,6 @@ Every included source license allows commercial use; obligations are listed per 
 | r2_right | Robonaut 2 | NASA-1.3 | yes (notice; modifications must be disclosed) | 18 | 18 | - | 25 | PASS 3/45 | sphere r=16 mm, drift 2 mm | collision_approximated:13, actuators_estimated, range_placeholder:18, effort_placeholder:18, inertia_from_geometry:28 |
 | valkyrie_right | Valkyrie | NASA-1.3 | yes (notice; modifications must be disclosed) | 13 | 13 | - | 6 | PASS 3/36 | box r=7 mm, drift 2 mm | actuators_estimated |
 | talos_right | TALOS | LGPL-3.0 | yes (LGPL terms on modified model files) | 7 | 1 | 6 mimic eq | 6 | PASS 32/48 | box r=11 mm, drift 1 mm | actuators_estimated |
-| nao_right | NAO | BSD-3-Clause | yes | 9 | 1 | 8 mimic eq | off | PASS 1/24 | box r=6 mm, drift 2 mm | collision_approximated:19, actuators_estimated |
 | romeo_right | Romeo | BSD-3-Clause | yes | 13 | 1 | 12 mimic eq | 9 | PASS 15/42 | box r=8 mm, drift 0 mm | collision_approximated:1, actuators_estimated |
 | jaxon_right | JAXON | CC-BY-SA-4.0 | yes (attribution; share-alike on derived assets) | 2 | 2 | - | 3 | PASS 15/36 | cylinder r=13 mm, drift 1 mm | convex_decomposed:3, actuators_estimated |
 | jvrc1_right | JVRC-1 | BSD-2-Clause | yes | 6 | 1 | 5 mimic eq | 5 | PASS 3/36 | sphere r=30 mm, drift 8 mm | actuator_converted_from_motor |
@@ -64,18 +63,6 @@ Every included source license allows commercial use; obligations are listed per 
 - 7 joints, 1 actuators (estimated), mass 1.094 kg, 8 collision geoms
 - Self-collision: 6 pairs (fingertip-palm, adjacent fingertips) over 4 fingers; 4 skipped, penetrating at rest
 - Closing direction: 1 by range, 0 by geometry, 0 override
-
-### nao_right (NAO, awesome-humanoid-learning)
-- Source: https://github.com/ros-naoqi/nao_robot @ `67476469a1`, `nao/nao_description/urdf/naoV50_generated_urdf/nao.urdf`, root link `r_wrist`; removed arm joints: RWristYaw
-- 9 joints, 1 actuators (estimated), mass 0.185 kg, 19 collision geoms
-- Self-collision: off for this hand (see notes)
-- Closing direction: 0 by range, 0 by geometry, 1 override
-- Meshes are CC-BY-NC-ND behind a click-through installer (nao_meshes); not accepted on the user's behalf.
-- Collision geometry approximated with capsules from the kinematic tree.
-- Self-collision off: the guessed capsules collide where the real hand would not (no pairs: passes; any pairs: fails).
-- Real meshes are non-commercial, so this is a mechanism-only embodiment, not a real-geometry anchor.
-- 78 mesh files missing; their geoms were dropped (e.g. package://nao_meshes/meshes/V40/HeadPitch.dae)
-- capsule collision geoms added on 19 links with no collision geometry
 
 ### romeo_right (Romeo, awesome-humanoid-learning)
 - Source: https://github.com/ros-aldebaran/romeo_robot @ `e53c8f3d70`, `romeo/romeo_description/urdf/romeo_generated_urdf/romeo.urdf`, root link `r_wrist`; removed arm joints: RWristPitch
@@ -174,7 +161,7 @@ Every included source license allows commercial use; obligations are listed per 
 | Atlas DRC v3 (drake models) | Arm ends at the wrist (l/r_arm_lwy); no hand modeled. |
 | Atlas v4 (roboschool) | Arm ends at the wrist (l/r_arm_wry2); no hand modeled. |
 | Digit | No hand joints; no license listed (not usable commercially anyway). |
-| NAO meshes (nao_meshes) | CC-BY-NC-ND: non-commercial, excluded. NAO is kept with capsule collision geometry. |
+| NAO | Hand meshes (nao_meshes) are CC-BY-NC-ND: non-commercial, excluded. With guessed capsule geometry the hand was a mechanism-only embodiment that failed with any self-collision pair; dropped (user decision, 2026-10-08). |
 | SigmaBan | No hand joints. |
 | Bolt, Cassie, Spryped, Upkie, Hector, SA01 | Bipeds without arms/hands; excluded by spec. |
 

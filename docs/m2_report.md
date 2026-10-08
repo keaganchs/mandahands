@@ -7,9 +7,9 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
 
 | Check | Result |
 |---|---|
-| Every extractable hand passes a scripted close-and-lift on a primitive | **19 / 19 pass** (14 hands from the awesome-humanoid-learning models, 4 Menagerie hands, plus Robotiq 2F-85). Per-hand trial counts are in `real_hands_report.md`. |
+| Every extractable hand passes a scripted close-and-lift on a primitive | **18 / 18 pass** (13 hands from the awesome-humanoid-learning models, 4 Menagerie hands, plus Robotiq 2F-85). Per-hand trial counts are in `real_hands_report.md`. |
 | Models without hands are documented as skipped, with a reason | WALK-MAN, Atlas DRC v3, Atlas v4, Digit, SigmaBan, and the bipeds (table in the report) |
-| Saved hands reload | All 19 `hand.xml` files reload and match the in-memory model: joints, actuators, equalities, masses, ranges and gains |
+| Saved hands reload | All 18 `hand.xml` files reload and match the in-memory model: joints, actuators, equalities, masses, ranges and gains |
 | Tests | `pytest tests`: 6 pass, including a toy-URDF extraction test (mimic coupling, arm-joint removal, placeholder sanitizing, mesh-name collision) and the self-collision pair rules |
 
 ## What was found vs the spec's guesses
@@ -20,7 +20,7 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
 | Robonaut 2 | Dexterous | 18 joints. **Placeholder dynamics** (1 kg / 1 kg·m² per phalanx, effort 1e7, ranges ±4 rad), all replaced and flagged. |
 | Valkyrie | Multi-finger | 13 joints, from the standalone `forearm_right.urdf` |
 | TALOS | Underactuated, mimic | 1 actuator and 6 mimic joints, as expected |
-| NAO | Single actuator | 1 actuator and 8 mimic joints. **Meshes are CC-BY-NC-ND**, so they're excluded under the commercial-use rule; capsule collision instead. Mechanism-only embodiment. |
+| NAO | Single actuator | 1 actuator and 8 mimic joints. **Meshes are CC-BY-NC-ND** (excluded under the commercial-use rule); with guessed capsule geometry it was mechanism-only and failed with any self-collision pair. **Dropped** (your decision, 2026-10-08). |
 | Romeo | Single actuator | 1 actuator and 12 mimic joints |
 | WALK-MAN | Synergy hand, if modeled | **Not modeled**: the SoftHand is a rigid mesh on fixed joints. Skipped. |
 | JAXON | Simple gripper | 2-joint hook gripper with ring-shaped fingers, which needed convex decomposition |
@@ -52,14 +52,14 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
   - LGPL: modified model files stay LGPL
   - NASA-1.3: notice and disclosure of modifications
 
-  NAO's CC-BY-NC-ND meshes are excluded and Digit (no license) stays skipped.
+  NAO's CC-BY-NC-ND meshes are excluded (NAO dropped, see below) and Digit (no license) stays skipped.
 - **Limited self-collision, on.** Explicit contact pairs only (hand geoms still never collide through contype bits), defined per hand by `add_self_collision` in `sim/builder.py` and carried through `attach_body`:
   - Each fingertip pairs with the palm and with the fingertips of its two nearest fingers (by base position; for a 2-jaw gripper, the other jaw).
   - Fingertip = the deepest link with collision geoms on a finger; one geom per tip (the one farthest from its parent).
   - Palm = the mount plus every fixed single-child link below it.
   - Pairs penetrating at rest are skipped (overlapping source meshes: TALOS 4, JAXON 3). So are pairs that never come within 1 cm over 64 random joint configurations plus simulated open/mid/closed poses.
   - Pairs are frictionless (`condim=1`): they only need to stop interpenetration.
-  - Result: 1–25 pairs per hand (LEAP 36). NAO is off: its guessed capsules collide where the real hand wouldn't (no pairs: passes; any pairs: fails).
+  - Result: 1–25 pairs per hand (LEAP 36). Kept as is (your decision, 2026-10-08); sphere proxies stay an option if M5 throughput needs them.
   - **Cost is real for dexterous hands.** Measured at 4096 worlds on the 3060, best grasp held: LEAP 238k → 113k steps/s (2.1×), Shadow 277k → 186k (1.5×). A first version (every geom on the tip link, condim 3) gave LEAP 156 pairs, a 10× slowdown, and capacity overflow. A cheaper option if needed later: sphere proxies at the fingertips for self-collision only.
 
 ## Other physics changes (since M1)
@@ -69,13 +69,13 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
 
 ## Caveats
 
-- The scripted test is a physics and actuation sanity check, not grasp quality. It's open-loop with a fixed closing command. Many dexterous hands pass only by caging small objects (6–10 mm half-size boxes) in a closed fist. Pass counts per hand range from 1/24 (NAO) and 1/45 (Dex3-1) to 32/48 (TALOS).
-- **14 of 19 hands have estimated actuators** (no actuator model in the URDF). Gains come from URDF effort over a quarter of the joint range. Several efforts are placeholders. These descriptors must be marked `estimated` and randomized widely (Component 2).
-- The closing direction comes from rules: the end of an asymmetric range farther from zero, otherwise geometry. One manual override: NAO `RHand` 0 = closed (Aldebaran convention; Romeo's URDF is the opposite, found empirically).
-- Collision approximations: NAO (all capsules), R2 (13 links), Romeo (1). JAXON uses CoACD parts. Other hands use the convex hulls of their source meshes. Decomposition is opt-in per hand to keep contact counts down.
+- The scripted test is a physics and actuation sanity check, not grasp quality. It's open-loop with a fixed closing command. Many dexterous hands pass only by caging small objects (6–10 mm half-size boxes) in a closed fist. Pass counts per hand range from 1/45 (Dex3-1) to 32/48 (TALOS).
+- **13 of 18 hands have estimated actuators** (no actuator model in the URDF). Gains come from URDF effort over a quarter of the joint range. Several efforts are placeholders. These descriptors must be marked `estimated` and randomized widely (Component 2).
+- The closing direction comes from rules: the end of an asymmetric range farther from zero, otherwise geometry. No manual overrides are left (the only one was NAO's).
+- Collision approximations: R2 (13 links), Romeo (1). JAXON uses CoACD parts. Other hands use the convex hulls of their source meshes. Decomposition is opt-in per hand to keep contact counts down.
 - The inertia replacement for placeholder links is a box estimate (marked `ponytail:` in code).
 
-## Open questions
+## Resolved after review (2026-10-08)
 
-1. Self-collision roughly halves throughput on the dexterous hands. Keep it as is, or switch to fingertip sphere proxies (cheaper, less exact) before the batching work in M5?
-2. NAO is now a mechanism-only embodiment (guessed geometry). Keep it in the real held-out set, or move it to training-only / drop it?
+1. Self-collision: kept as is.
+2. NAO: dropped. 18 real hands remain.

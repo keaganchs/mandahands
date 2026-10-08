@@ -130,7 +130,7 @@ def report(metas: list[dict]):
     best = f"{b['obj']} r={1000 * b['size']:.0f} mm, drift {1000 * b['drift']:.0f} mm" if b else "-"
     sc = m["self_collision"]
     lines.append(f"| {m['id']} | {m['robot']} | {m['license']} | {COMMERCIAL[m['license']]} | {c['njnt']} | {c['nu']} | "
-                 f"{', '.join(coup) or '-'} | {'off' if sc.get('disabled') else sc['n_pairs']} | "
+                 f"{', '.join(coup) or '-'} | {sc['n_pairs']} | "
                  f"{'PASS' if g['passed'] else 'FAIL'} {g['passed']}/{g['trials']} | {best} | {', '.join(m['flags']) or '-'} |")
   lines += ["", "## Notes per hand", ""]
   for m in metas:
@@ -142,11 +142,8 @@ def report(metas: list[dict]):
                  f"({', '.join(sorted({a['origin'] for a in m['actuators']})) or 'tendon'}), mass {m['counts']['mass']:.3f} kg, "
                  f"{m['counts']['ncollision']} collision geoms")
     sc = m["self_collision"]
-    if sc.get("disabled"):
-      lines.append("- Self-collision: off for this hand (see notes)")
-    else:
-      lines.append(f"- Self-collision: {sc['n_pairs']} pairs (fingertip-palm, adjacent fingertips) over {sc['n_fingers']} fingers"
-                   + (f"; {sc['skipped_penetrating']} skipped, penetrating at rest" if sc["skipped_penetrating"] else ""))
+    lines.append(f"- Self-collision: {sc['n_pairs']} pairs (fingertip-palm, adjacent fingertips) over {sc['n_fingers']} fingers"
+               + (f"; {sc['skipped_penetrating']} skipped, penetrating at rest" if sc["skipped_penetrating"] else ""))
     rules = m["probe"]["close_rule"]
     lines.append(f"- Closing direction: {sum(v == 'range' for v in rules.values())} by range, "
                  f"{sum(v == 'geometry' for v in rules.values())} by geometry, {sum(v == 'override' for v in rules.values())} override")

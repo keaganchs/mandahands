@@ -214,7 +214,7 @@ def extract(hs: HandSource) -> tuple[mujoco.MjSpec, dict]:
     if j.armature < MIN_ARMATURE:
       j.armature = MIN_ARMATURE
 
-  self_collision = add_self_collision(spec) if hs.self_collision else dict(n_pairs=0, n_fingers=0, disabled=True)
+  self_collision = add_self_collision(spec)
   # (after actuators: it simulates the hand closing)
 
   url, commit, _ = REPOS[hs.repo]
