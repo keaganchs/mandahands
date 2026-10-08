@@ -20,7 +20,7 @@ import json
 import mujoco
 import numpy as np
 
-GENERATOR_VERSION = 1
+GENERATOR_VERSION = 2  # v2: tendon coupling split into one-directional (spring return) and bidirectional
 NSAMPLE = 12  # actuator history length: covers delays up to (NSAMPLE - 2) * 2 ms
 MAX_LATENCY = 0.02
 SCALE = (0.6, 1.8)
@@ -43,7 +43,9 @@ def sample_topology(seed: int, t: int) -> dict:
   layout = str(r.choice(["anthro", "radial", "jaw"], p=[0.65, 0.25, 0.10]))
   if layout == "jaw":
     return dict(layout="jaw", n_fingers=int(r.choice([2, 3])), coupling=str(r.choice(["mimic", "full"])))
-  coupling = str(r.choice(["full", "mimic", "tendon", "synergy"], p=[0.4, 0.25, 0.2, 0.15]))
+  # tendon_pull: one cable per finger that only pulls (closes), joints opened by return springs;
+  # tendon_bidir: one cable per finger driven both ways (push-pull / antagonistic), no springs
+  coupling = str(r.choice(["full", "mimic", "tendon_pull", "tendon_bidir", "synergy"], p=[0.4, 0.25, 0.1, 0.1, 0.15]))
   abduction = "none" if coupling == "synergy" else str(r.choice(["none", "all", "thumb"], p=[0.45, 0.35, 0.2]))
   topo = dict(
     layout=layout,
@@ -63,7 +65,7 @@ def sample_topology(seed: int, t: int) -> dict:
   topo["abduction"] = abduction
   if abduction == "none":
     del topo["abd_order"]
-  if coupling in ("mimic", "tendon") and topo["n_phalanges"] == 1 and topo.get("thumb_phalanges", 1) == 1:
+  if coupling in ("mimic", "tendon_pull", "tendon_bidir") and topo["n_phalanges"] == 1 and topo.get("thumb_phalanges", 1) == 1:
     topo["coupling"] = "full"  # nothing to couple on single-joint fingers
   return topo
 
@@ -149,7 +151,9 @@ def sample_genome(topo: dict, seed: int, t: int, v: int) -> dict:
       abd=r.uniform(0.15, 0.6) if f["abd"] else 0.0,
       axis_noise=r.normal(0, 0.06, (f["n"] + 1, 3)).tolist(),  # small rotation vector per joint axis (~3.5 deg sd)
       ratio=r.uniform(0.6, 1.2, f["n"]).tolist(),  # mimic / tendon coupling coefficients
-      spring=r.uniform(0.02, 0.1),  # tendon hands: joint return spring, fraction of torque per rad
+      # tendon_pull hands: joint return spring, fraction of torque per rad; must beat frictionloss (<= 5% of torque)
+      # over most of the range or the finger stays half closed
+      spring=r.uniform(0.15, 0.4),
     )
     if topo["layout"] == "radial":
       fd["angle"] = 2 * np.pi * i / len(fingers) + r.uniform(-0.3, 0.3) / len(fingers)
@@ -187,7 +191,7 @@ def _actuated(topo, fingers) -> list[tuple]:
       out += [(i, "flex", k) for k in range(f["n"])]
     elif topo["coupling"] == "mimic":
       out.append((i, "flex", 0))
-    elif topo["coupling"] == "tendon":
+    elif topo["coupling"].startswith("tendon"):
       out.append((i, "tendon", 0))
     elif topo["coupling"] == "synergy" and i == 0:
       out.append((0, "flex", 0))
@@ -225,7 +229,7 @@ def build(topo: dict, g: dict) -> tuple[mujoco.MjSpec, dict]:
     act.forcelimited, act.forcerange = True, [-force * j["force_jit"], force * j["force_jit"]]
     act.delay, act.nsample = a["latency"], NSAMPLE
     meta["actuators"].append(dict(
-      name=name, target=target, kp=kp, kv=a["damp_ratio"] * kp, force=force * j["force_jit"],
+      name=name, target=target, kp=kp, kv=a["damp_ratio"] * kp, force=force * j["force_jit"], force_min=-force * j["force_jit"],
       velocity=a["velocity"] * (0.05 if slide else 1), backlash=a["backlash"],
       latency=a["latency"], source="procedural",
     ))
@@ -296,7 +300,7 @@ def build(topo: dict, g: dict) -> tuple[mujoco.MjSpec, dict]:
       for kind, ax, rng in jnts:
         jn = b.add_joint(name=f"f{i}_{kind}{k}", type=mujoco.mjtJoint.mjJNT_HINGE, axis=ax, range=rng,
                          armature=a["armature"], damping=a["damping"], frictionloss=a["frictionloss"] * a["torque"])
-        if topo["coupling"] == "tendon" and kind == "flex":
+        if topo["coupling"] == "tendon_pull" and kind == "flex":
           jn.stiffness = [fg["spring"] * a["torque"], 0, 0]  # return spring: the tendon only pulls
         meta["joints"].append(dict(name=jn.name, finger=i, kind=kind, depth=k, role=f["role"]))
       tip = k == len(fg["lengths"]) - 1
@@ -330,7 +334,11 @@ def build(topo: dict, g: dict) -> tuple[mujoco.MjSpec, dict]:
         hi = float(np.dot(coefs, fg["flex_hi"]))
         servo(f"f{i}_tendon_act", ten.name, mujoco.mjtTrn.mjTRN_TENDON, hi, a["torque"], ai)
         s.actuators[-1].ctrlrange = [0, hi]
-        meta["tendons"].append(dict(name=ten.name, actuator=f"f{i}_tendon_act", joints=[j["name"] for j in flex], coefs=list(coefs)))
+        if topo["coupling"] == "tendon_pull":  # a cable can't push: closing force only, springs open the finger
+          s.actuators[-1].forcerange = [0, s.actuators[-1].forcerange[1]]
+          meta["actuators"][-1]["force_min"] = 0.0
+        meta["tendons"].append(dict(name=ten.name, actuator=f"f{i}_tendon_act", joints=[j["name"] for j in flex], coefs=list(coefs),
+                                    directional=topo["coupling"] == "tendon_pull"))
 
     # equality coupling: mimic (distal joints follow the finger's proximal joint) or synergy (every flexion
     # joint follows finger 0's proximal joint). Ratios are scaled so leader and follower reach their limits together.

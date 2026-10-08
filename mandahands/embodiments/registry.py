@@ -23,11 +23,11 @@ def spec_hash(spec: mujoco.MjSpec) -> str:
 
 
 @cache
-def manifest(name: str = "genhand-1k-v1") -> dict:
+def manifest(name: str = "genhand-1k-v2") -> dict:
   return json.loads((REGISTRY / f"{name}.json").read_text())
 
 
-def ids(split: str, name: str = "genhand-1k-v1") -> list[str]:
+def ids(split: str, name: str = "genhand-1k-v2") -> list[str]:
   """Hand ids in a split: train / test_id / test_ood_topology / test_ood_scale, or train_N for a scaling subset."""
   man = manifest(name)
   if split.startswith("train_"):
@@ -35,7 +35,7 @@ def ids(split: str, name: str = "genhand-1k-v1") -> list[str]:
   return [h["id"] for h in man["hands"] if h.get("split") == split]
 
 
-def genhand(hand_id: str, name: str = "genhand-1k-v1") -> tuple[mujoco.MjSpec, dict]:
+def genhand(hand_id: str, name: str = "genhand-1k-v2") -> tuple[mujoco.MjSpec, dict]:
   """Regenerate a GENHAND hand (with its self-collision pairs) and check it matches the manifest."""
   man = manifest(name)
   if man["generator_version"] != GENERATOR_VERSION:

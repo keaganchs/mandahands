@@ -94,3 +94,28 @@ def test_registry_splits():
   assert all(a <= b for a, b in zip(subsets, subsets[1:])) and subsets[-1] == split_ids["train"]
   spec, meta = registry.genhand(sorted(split_ids["train"])[0])  # regenerates and checks the hash
   assert spec.compile().npair > 0 and meta["split"] == "train"
+
+
+@pytest.mark.parametrize("coupling", ["tendon_pull", "tendon_bidir"])
+def test_tendon_directionality(coupling):
+  topo = dict(layout="radial", n_fingers=3, n_phalanges=3, coupling=coupling, tip="capsule", thumb="none", abduction="none")
+  spec, meta = build(topo, sample_genome(topo, 0, 0, 0))
+  m = spec.compile()
+  assert m.ntendon == 3 and m.nu == 3 and (m.actuator_trntype == mujoco.mjtTrn.mjTRN_TENDON).all()
+  pull = coupling == "tendon_pull"
+  assert ((m.actuator_forcerange[:, 0] == 0) == pull).all() and (m.actuator_forcerange[:, 1] > 0).all()
+  assert ((m.jnt_stiffness > 0) == pull).all()
+  assert all(t["directional"] == pull for t in meta["tendons"])
+  # from a curled pose, commanding open (contacts off): springs open the pull-only finger joint by joint; a single
+  # bidirectional cable only sets the weighted sum of its joints, so check its length instead
+  m.opt.gravity[:] = 0
+  m.geom_contype[:] = m.geom_conaffinity[:] = 0
+  d = mujoco.MjData(m)
+  d.qpos[:] = 1.0
+  d.ctrl[:] = 0
+  for _ in range(1500):
+    mujoco.mj_step(m, d)
+  if pull:
+    assert np.abs(d.qpos).max() < 0.4, d.qpos
+  else:
+    assert np.abs(d.ten_length).max() < 0.1, d.ten_length
