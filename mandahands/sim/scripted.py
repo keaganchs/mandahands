@@ -203,6 +203,30 @@ def _driven_bodies(m: mujoco.MjModel) -> np.ndarray:
   return out
 
 
+def place(hand: mujoco.MjSpec, pr: dict, centre, obj: str, size: float, cfg: SceneCfg | None = None, spec_fn=build_scene):
+  """Scene with an object of half-extent `size` at `centre` (hand-mount frame), the palm straight above it.
+  Returns (scene spec, wrist_pos, wrist_quat, obj_pos)."""
+  cfg = SceneCfg(**{**(cfg or SceneCfg()).__dict__, "obj": obj, "obj_half": size})
+  ax = (centre - pr["palm"]) / np.linalg.norm(centre - pr["palm"])
+  quat = _quat_to(ax, np.array([0.0, 0.0, -1.0]))
+  rot = np.zeros(9)
+  mujoco.mju_quat2Mat(rot, quat)
+  obj_pos = np.array([0, 0, 0.5])
+  wrist_pos = obj_pos - rot.reshape(3, 3) @ centre
+  return spec_fn(cfg, hand, wrist_pos=wrist_pos, wrist_quat=quat, obj_pos=obj_pos), wrist_pos, quat, obj_pos
+
+
+def start_state(m: mujoco.MjModel, pr: dict) -> mujoco.MjData:
+  """Hand at its open pose (stepping the command from rest to open flings light fingers: LEAP ~200 rad/s), object
+  held by its support weld."""
+  d = mujoco.MjData(m)
+  for name, q in pr["qpos_open"].items():
+    d.qpos[m.jnt_qposadr[m.joint(name).id]] = q
+  d.eq_active[m.equality("object_support").id] = 1
+  mujoco.mj_forward(m, d)
+  return d
+
+
 def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj: str, cfg: SceneCfg | None = None,
                    on_phase=None, size: float | None = None, squeeze: float | None = SQUEEZE) -> dict:
   """Object of type obj fitted at `centre` (mount frame); the palm is placed straight above it.
@@ -213,23 +237,10 @@ def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj:
   on_phase(name, m, d) is called after each phase (open/closed/released/lifted/held), e.g. to render.
   """
   on_phase = on_phase or (lambda name, m, d: None)
-  cfg = cfg or SceneCfg()
   size = size or _FIT[obj] * clearance
-  cfg = SceneCfg(**{**cfg.__dict__, "obj": obj, "obj_half": size})
-  ax = (centre - pr["palm"]) / np.linalg.norm(centre - pr["palm"])
-  quat = _quat_to(ax, np.array([0.0, 0.0, -1.0]))
-  rot = np.zeros(9)
-  mujoco.mju_quat2Mat(rot, quat)
-  obj_pos = np.array([0, 0, 0.5])
-  wrist_pos = obj_pos - rot.reshape(3, 3) @ centre
-  m = build_scene(cfg, hand, wrist_pos=wrist_pos, wrist_quat=quat, obj_pos=obj_pos).compile()
-  d = mujoco.MjData(m)
-  # start at the open pose: stepping the command from rest to open flings light fingers (LEAP: ~200 rad/s)
-  for name, q in pr["qpos_open"].items():
-    d.qpos[m.jnt_qposadr[m.joint(name).id]] = q
-  mujoco.mj_forward(m, d)
-  sup = m.equality("object_support").id
-  d.eq_active[sup] = 1
+  spec, wrist_pos, quat, obj_pos = place(hand, pr, centre, obj, size, cfg)
+  m = spec.compile()
+  d = start_state(m, pr)
   oid, wid = m.body("object").id, m.body("wrist").id
   dt = m.opt.timestep
   z0 = d.mocap_pos[0, 2]
@@ -264,7 +275,7 @@ def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj:
     mujoco.mj_step(m, d)
   on_phase("closed", m, d)
   n_contact = sum(1 for c in d.contact[: d.ncon] if oid in (m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]))
-  d.eq_active[sup] = 0
+  d.eq_active[m.equality("object_support").id] = 0
   run(T_RELEASE)
   on_phase("released", m, d)
   rel0 = d.xpos[oid] - d.xpos[wid]

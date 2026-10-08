@@ -82,7 +82,6 @@ HANDS = [
   HandSource("leap_right", "LEAP Hand", "menagerie", "menagerie/leap_hand/right_hand.xml", "palm", "MIT", source="menagerie"),
   HandSource("allegro_right", "Wonik Allegro", "menagerie", "menagerie/wonik_allegro/right_hand.xml", "palm", "BSD-2-Clause", source="menagerie"),
   HandSource("shadow_right", "Shadow Hand E3M5", "menagerie", "menagerie/shadow_hand/right_hand.xml", "rh_palm", "Apache-2.0", source="menagerie"),
-  HandSource("robotiq_2f85", "Robotiq 2F-85", "menagerie", "menagerie/robotiq_2f85/2f85.xml", "base_mount", "BSD-2-Clause", source="menagerie"),
 ]
 
 # Inspected and skipped: model -> reason
@@ -94,5 +93,7 @@ SKIPPED = {
   "NAO": "Hand meshes (nao_meshes) are CC-BY-NC-ND: non-commercial, excluded. With guessed capsule geometry the hand was a "
          "mechanism-only embodiment that failed with any self-collision pair; dropped (user decision, 2026-10-08).",
   "SigmaBan": "No hand joints.",
+  "Robotiq 2F-85 (Menagerie)": "Closed four-bar linkage: its passive joints can't be expressed in the coupling descriptor. "
+                               "Held out until backlog B2 adds four-bar grippers (user decision, 2026-10-08).",
   "Bolt, Cassie, Spryped, Upkie, Hector, SA01": "Bipeds without arms/hands; excluded by spec.",
 }

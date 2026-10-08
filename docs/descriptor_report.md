@@ -11,7 +11,7 @@ Score = mean over a hand's tokens of the distance (normalized descriptor space) 
 | test_id | 75 | 0 (0%) | 2.13 | 1.36 |
 | test_ood_topology | 83 | 1 (1%) | 2.12 | 1.46 |
 | test_ood_scale | 131 | 12 (9%) | 2.47 | 1.54 |
-| real | 18 | 9 | 3.79 | 1.77 |
+| real | 17 | 8 | 3.56 | 1.62 |
 
 | real hand | joints | actuators | joint score (pct) | actuator score (pct) | out of support | flags |
 |---|---|---|---|---|---|---|
@@ -19,7 +19,6 @@ Score = mean over a hand's tokens of the distance (normalized descriptor space) 
 | jvrc1_right | 6 | 1 | 5.84 (100) | 2.58 (97) | **yes** | - |
 | leap_right | 16 | 16 | 5.24 (100) | 1.92 (83) | **yes** | - |
 | r2_right | 18 | 18 | 8.72 (100) | 1.53 (60) | **yes** | - |
-| robotiq_2f85 | 8 | 1 | 4.53 (100) | 5.09 (100) | **yes** | closed_loop_not_in_coupling |
 | romeo_right | 13 | 1 | 4.76 (100) | 2.35 (94) | **yes** | - |
 | talos_right | 7 | 1 | 4.45 (100) | 2.20 (91) | **yes** | - |
 | allegro_right | 16 | 16 | 4.34 (100) | 1.45 (53) | **yes** | - |
@@ -38,8 +37,8 @@ Score = mean over a hand's tokens of the distance (normalized descriptor space) 
 
 Share of real tokens outside the train tokens' 1st-99th percentile, per field (fields above 10% listed).
 
-- joint tokens (206 real): `base_pos_z` 25%, `tip_vec_x` 21%, `tip_pos_x` 21%, `axis_z` 16%, `pos_z` 14%, `tip_pos_z` 14%, `lo` 13%, `link_mass` 12%, `hi` 11%, `range` 11%, `axis_x` 10%
-- actuator tokens (155 real): `driven_pos_z` 15%
+- joint tokens (198 real): `base_pos_z` 26%, `tip_vec_x` 22%, `tip_pos_x` 22%, `axis_z` 16%, `pos_z` 15%, `tip_pos_z` 15%, `lo` 13%, `link_mass` 13%, `range` 12%, `hi` 11%
+- actuator tokens (154 real): `driven_pos_z` 16%
 
 ![tokens](descriptor_tokens.png)
 

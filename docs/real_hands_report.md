@@ -29,7 +29,6 @@ Every included source license allows commercial use; obligations are listed per 
 | leap_right | LEAP Hand | MIT | yes | 16 | 16 | - | 36 | PASS 14/36 | box r=18 mm, drift 1 mm | - |
 | allegro_right | Wonik Allegro | BSD-2-Clause | yes | 16 | 16 | - | 9 | PASS 17/51 | sphere r=9 mm, drift 1 mm | - |
 | shadow_right | Shadow Hand E3M5 | Apache-2.0 | yes (notice) | 22 | 18 | 4 tendon act | 17 | PASS 18/54 | cylinder r=6 mm, drift 0 mm | - |
-| robotiq_2f85 | Robotiq 2F-85 | BSD-2-Clause | yes | 8 | 1 | 1 mimic eq, 1 tendon act, 2 other eq | 3 | PASS 20/33 | box r=6 mm, drift 0 mm | - |
 
 ## Notes per hand
 
@@ -150,12 +149,6 @@ Every included source license allows commercial use; obligations are listed per 
 - Self-collision: 17 pairs (fingertip-palm, adjacent fingertips) over 5 fingers
 - Closing direction: 11 by range, 7 by geometry, 0 override
 
-### robotiq_2f85 (Robotiq 2F-85, menagerie)
-- Source: https://github.com/google-deepmind/mujoco_menagerie @ `f054586a8e`, `menagerie/robotiq_2f85/2f85.xml`, root link `base_mount`; removed arm joints: none
-- 8 joints, 1 actuators (source_model), mass 1.053 kg, 14 collision geoms
-- Self-collision: 3 pairs (fingertip-palm, adjacent fingertips) over 4 fingers
-- Closing direction: 1 by range, 0 by geometry, 0 override
-
 ## Inspected and skipped
 
 | model | reason |
@@ -166,6 +159,7 @@ Every included source license allows commercial use; obligations are listed per 
 | Digit | No hand joints; no license listed (not usable commercially anyway). |
 | NAO | Hand meshes (nao_meshes) are CC-BY-NC-ND: non-commercial, excluded. With guessed capsule geometry the hand was a mechanism-only embodiment that failed with any self-collision pair; dropped (user decision, 2026-10-08). |
 | SigmaBan | No hand joints. |
+| Robotiq 2F-85 (Menagerie) | Closed four-bar linkage: its passive joints can't be expressed in the coupling descriptor. Held out until backlog B2 adds four-bar grippers (user decision, 2026-10-08). |
 | Bolt, Cassie, Spryped, Upkie, Hector, SA01 | Bipeds without arms/hands; excluded by spec. |
 
 ## Flag legend

@@ -20,13 +20,22 @@ def make_batch(mjm: mujoco.MjModel, nworld: int, nconmax: int | None = None, njm
   return m, d
 
 
-def capture_step(m, d, nsubstep: int = 1):
-  """Capture nsubstep physics steps (one control step) as a CUDA graph."""
-  mjw.step(m, d)  # first call compiles kernels outside the capture
-  with wp.ScopedCapture() as cap:
-    for _ in range(nsubstep):
-      mjw.step(m, d)
+def capture_step(m, d, nsubstep: int = 1, stream=None):
+  """Capture nsubstep physics steps (one control step) as a CUDA graph (on `stream` if given)."""
+  with wp.ScopedStream(stream) if stream is not None else _null():
+    mjw.step(m, d)  # first call compiles kernels outside the capture
+    with wp.ScopedCapture(stream=stream) as cap:
+      for _ in range(nsubstep):
+        mjw.step(m, d)
   return cap.graph
+
+
+class _null:
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *a):
+    return False
 
 
 def contact_stats(d) -> dict:
