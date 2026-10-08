@@ -60,8 +60,28 @@ Raw results: `results/bench_groups_<gpu>.{json,md}` (local, gitignored).
 
 **Generator option, independent of A/B/C:** make tendon coefficients a topology-level parameter (generator v5), so tendon classes batch like the others instead of splitting into one group per variant. Tendon diversity across classes is unchanged, but variants within a class would share their coefficients.
 
-## Open questions
+## Decisions (2026-10-08) and what was added
 
-1. Batching strategy: A (my recommendation), B or C?
-2. Tendon coefficients per topology class (generator v5)?
-3. Real hands are evaluation-only by default (spec), so I'd step them as their own groups in evaluation runs and not mix them into training batches. OK?
+1. **Strategy A: rotating class subsets** (`mandahands/sim/rotation.py`).
+   - Each rotation picks `n_groups` topology classes uniformly over classes, with up to `variants` hands each, and builds one Group per class with one CUDA stream each.
+   - Scenes are built once per hand and cached on disk (`data/cache/scenes/`).
+   - Tests check that groups never mix classes, that picks are deterministic per rotation and resampled across rotations, and that the real-hand flag works.
+2. **Tendon coefficients are domain-randomized per batch** (`groups.tendon_dr`). Every variant of a group shares one sampled set of coefficients: the first variant's, × U(0.8, 1.2) per joint wrap. It's resampled at every rotation.
+   - Command ranges and start commands are rescaled to the new coefficients, and derived constants are recomputed.
+   - Tendon classes are now batchable like the others; a test confirms it.
+   - Per batch rather than per hand, because MJWarp can't vary `wrap_prm` per world.
+3. **Real hands are evaluation-only by default.** `RotationCfg.include_real=True` mixes them into training as their own groups, at `real_fraction` of the groups (default 25%).
+
+### A vs C (`scripts/bench_rotation.py`)
+
+| GPU | strategy | worlds | groups | physics steps/s | peak MiB | build s | rotate s |
+|---|---|---|---|---|---|---|---|
+| RTX 3060 Laptop | A | 8400 | 16 | **0.78 M** | 865 | 23 | 12 |
+| RTX 3060 Laptop | C | 8400 | 142 (every train class) | 0.38 M | 701 | 52 | – |
+| RTX A5000 | A / C | 16800, 50400 | | **not run**: see below | | | |
+
+- **Cost of a rotation:** "rotate s" is one rotation, mostly building scenes for classes not yet cached (cold cache here). Rotating every few minutes of training costs little.
+- **Memory:** A's peak includes building the next rotation while the previous one is still allocated.
+- **A5000 not tested.** `pink_server` is back online, but its NVIDIA driver isn't loaded. The machine rebooted at 12:07 today into kernel 7.0.0-34 (it ran 7.0.0-31 before). There's no NVIDIA kernel module for the new kernel (no DKMS build, no `/dev/nvidia*`), so `nvidia-smi` fails.
+  - Fixing it needs root: rebuild or reinstall the driver for 7.0.0-34, or boot 7.0.0-31.
+  - Then run `python scripts/bench_rotation.py --worlds 16800 50400` and `python scripts/bench_groups.py --worlds 16800`.

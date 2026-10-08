@@ -73,3 +73,8 @@ def descriptor(hand_id: str, name: str = "genhand-1k-v4"):
     spec, meta = real(hand_id)
     acts = [dict(name=a["name"], velocity=a.get("velocity") or None, source=_SOURCE[a["origin"]]) for a in meta["actuators"]]
   return describe(spec, acts)
+
+
+def real_ids() -> list[str]:
+  """Real hands extracted locally (scripts/extract_real.py), sorted."""
+  return sorted(p.parent.name for p in REAL_HANDS.glob("*/hand.xml"))

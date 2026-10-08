@@ -74,6 +74,31 @@ def union_pairs(hands: list[mujoco.MjSpec]) -> None:
                  solimp=list(src.solimp) if k in o else OFF_SOLIMP)
 
 
+def tendon_dr(models: list[mujoco.MjModel], datas: list[mujoco.MjData], rng: np.random.Generator, scale: float = 0.2):
+  """Per-batch tendon coefficient randomization, in place. MJWarp can't vary tendon coefficients (wrap_prm) per
+  world, so all variants of a group share one sampled set: the first variant's coefficients x U(1-s, 1+s) per
+  joint wrap. Tendon actuator command ranges (and the start commands) are rescaled to the new coefficients, and
+  derived constants recomputed. Resampled whenever groups are rebuilt (rotation). Returns the coefficients."""
+  m0 = models[0]
+  if not m0.ntendon:
+    return None
+  jw = np.flatnonzero(m0.wrap_type == int(mujoco.mjtWrap.mjWRAP_JOINT))
+  coef = m0.wrap_prm.copy()
+  coef[jw] *= 1 + rng.uniform(-scale, scale, len(jw))
+  for m, d in zip(models, datas):
+    for t in range(m.ntendon):
+      ws = [w for w in range(m.tendon_adr[t], m.tendon_adr[t] + m.tendon_num[t]) if w in set(jw)]
+      reach = lambda prm: sum(prm[w] * m.jnt_range[m.wrap_objid[w], 1] for w in ws)
+      old = reach(m.wrap_prm)
+      ratio = reach(coef) / old if abs(old) > 1e-12 else 1.0
+      for a in np.flatnonzero((m.actuator_trntype == int(mujoco.mjtTrn.mjTRN_TENDON)) & (m.actuator_trnid[:, 0] == t)):
+        m.actuator_ctrlrange[a] *= ratio
+        d.ctrl[a] *= ratio
+    m.wrap_prm[:] = coef
+    mujoco.mj_setConst(m, mujoco.MjData(m))  # scratch data: setConst overwrites its state
+  return coef
+
+
 class Group:
   """One MJWarp batch over V structurally identical scene variants; world w runs variant w % V."""
 
