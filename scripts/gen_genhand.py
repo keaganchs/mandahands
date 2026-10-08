@@ -91,7 +91,7 @@ def splits(hands, topos, scale_range):
 
 
 def coverage(hands, real, out_png):
-  """Standardize summaries by train statistics; nearest-neighbour distances real -> train vs test_id -> train."""
+  """Standardize summaries by train statistics; nearest-neighbour distances real -> train vs leave-one-out train -> train."""
   import matplotlib
 
   matplotlib.use("Agg")
@@ -106,14 +106,18 @@ def coverage(hands, real, out_png):
   Z = lambda x: (x - mu) / sd
   Zt = Z(Xt)
   nn = lambda z: np.sqrt(((Zt[None] - z[:, None]) ** 2).sum(-1)).min(1)
-  base = nn(Z(X([h for h in hands if h.get("split") == "test_id"])))
+  # baseline: leave-one-out nearest neighbour within train (stabler than the ~80 test_id hands)
+  dt = np.sqrt(((Zt[None] - Zt[:, None]) ** 2).sum(-1))
+  np.fill_diagonal(dt, np.inf)
+  base = dt.min(1)
   Xr = np.array([[s[f] for f in FEATURES] for s in real.values()])
   d_real = nn(Z(Xr))
   p1, p99 = np.percentile(Xt, 1, 0), np.percentile(Xt, 99, 0)
   rows = []
   for (hid, s), dist, x in zip(real.items(), d_real, Xr):
     outside = [f"{f} {'low' if v < a else 'high'}" for f, v, a, b in zip(FEATURES, x, p1, p99) if not a <= v <= b]
-    rows.append(dict(id=hid, nn=float(dist), pct=float((base < dist).mean() * 100), outside=outside))
+    rows.append(dict(id=hid, nn=float(dist), pct=float((base < dist).mean() * 100), outside=outside,
+                     nearest=[train[i]["id"] for i in np.argsort(np.sqrt(((Zt - Z(x)) ** 2).sum(-1)))[:3]]))
 
   # PCA on train, everything projected into it
   _, _, vt = np.linalg.svd(Zt, full_matrices=False)
@@ -221,14 +225,14 @@ def report(man, cov, path, sheet_png, cov_png):
         f"classes whose variants differ in self-collision pair count: {man['classes']['npair_varies']}.", "",
         "## Coverage: real hands vs the procedural cloud", "",
         f"Hand-level summary vector ({', '.join(f'`{f}`' for f in FEATURES)}), standardized by train statistics. "
-        f"Nearest-neighbour distance from each real hand to the train set, compared with test_id -> train "
+        f"Nearest-neighbour distance from each real hand to the train set, compared with leave-one-out train -> train "
         f"(median {cov['baseline']['p50']:.2f}, p95 {cov['baseline']['p95']:.2f}, p99 {cov['baseline']['p99']:.2f}, max {cov['baseline']['max']:.2f}). "
         f"PCA: first two components explain {100 * sum(cov['pca_explained']):.0f}% of the train variance.", "",
         f"![coverage]({cov_png})", "",
-        "| real hand | NN distance | percentile vs test_id | features outside train p1-p99 |", "|---|---|---|---|"]
+        "| real hand | NN distance | percentile vs train | features outside train p1-p99 | nearest train hands |", "|---|---|---|---|---|"]
   for r in sorted(cov["rows"], key=lambda r: -r["nn"]):
     flag = " **out of support**" if r["nn"] > cov["baseline"]["p99"] else ""
-    L.append(f"| {r['id']} | {r['nn']:.2f}{flag} | {r['pct']:.0f} | {', '.join(r['outside']) or '-'} |")
+    L.append(f"| {r['id']} | {r['nn']:.2f}{flag} | {r['pct']:.0f} | {', '.join(r['outside']) or '-'} | {', '.join(r['nearest'])} |")
   L += ["", "## Sample of valid hands (open pose)", "", f"![sheet]({sheet_png})", ""]
   path.write_text("\n".join(L) + "\n")
 

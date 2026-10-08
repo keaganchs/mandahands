@@ -145,7 +145,7 @@ def sample_genome(topo: dict, seed: int, t: int, v: int) -> dict:
       radius=min(rad * (r.uniform(1.0, 1.3) if thumb else r.uniform(0.9, 1.1)), lengths.min() / 2.5),
       taper=r.uniform(0.75, 1.0),
       flex_lo=(-r.uniform(0, 0.35, f["n"]) - np.r_[r.uniform(0, 0.15), np.zeros(f["n"] - 1)]).tolist(),  # base joint opens wider
-      flex_hi=r.uniform(1.0, 1.9, f["n"]).tolist(),
+      flex_hi=r.uniform(1.0, 2.2, f["n"]).tolist(),
       abd=r.uniform(0.15, 0.6) if f["abd"] else 0.0,
       axis_noise=r.normal(0, 0.06, (f["n"] + 1, 3)).tolist(),  # small rotation vector per joint axis (~3.5 deg sd)
       ratio=r.uniform(0.6, 1.2, f["n"]).tolist(),  # mimic / tendon coupling coefficients
