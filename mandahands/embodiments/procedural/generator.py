@@ -20,7 +20,8 @@ import json
 import mujoco
 import numpy as np
 
-GENERATOR_VERSION = 2  # v2: tendon coupling split into one-directional (spring return) and bidirectional
+GENERATOR_VERSION = 4  # v2: one-directional and bidirectional tendons; v3: hands without kv / joint damping / frictionloss;
+# v4: abduction up to +-1 rad
 NSAMPLE = 12  # actuator history length: covers delays up to (NSAMPLE - 2) * 2 ms
 MAX_LATENCY = 0.02
 SCALE = (0.6, 1.8)
@@ -97,14 +98,17 @@ def sample_genome(topo: dict, seed: int, t: int, v: int) -> dict:
     torque=_logu(r, 0.15, 3.0) * s**2,  # Nm (hinge); slide jaws use force_jaw
     force_jaw=_logu(r, 5, 60) * s**2,  # N
     stiff_frac=r.uniform(0.15, 0.6),  # position error (fraction of range) at which the servo saturates
-    damp_ratio=_logu(r, 0.02, 0.1),  # kv / kp, s
+    # kv / kp (s). 20% of hands have no servo derivative term and damp in the joint instead (as Menagerie models do)
+    damp_ratio=0.0 if r.uniform() < 0.2 else _logu(r, 0.02, 0.1),
     armature=_logu(r, 1e-4, 5e-3) * s**2,
-    damping=_logu(r, 5e-3, 0.1) * s**2,
-    frictionloss=r.uniform(0, 0.05),  # fraction of the torque limit
+    damping=_logu(r, 5e-3, 0.1) * s**2 * (0.0 if r.uniform() < 0.3 else 1.0),  # many real models have none
+    frictionloss=0.0 if r.uniform() < 0.5 else r.uniform(0, 0.05),  # fraction of the torque limit; often unmodeled
     velocity=_logu(r, 2, 10),  # rad/s (x 0.05 m per rad for slides): descriptor only, not simulated until M7
     backlash=r.uniform(0, 0.03),  # rad: descriptor only, not simulated until M7
     latency=r.uniform(0, MAX_LATENCY),  # s: simulated (actuator delay)
   )
+  if g["act"]["damp_ratio"] == 0.0:  # damping lives in the joints: make sure there is some
+    g["act"]["damping"] = _logu(r, 0.02, 0.3) * s**2
   jit = lambda: r.uniform(0.85, 1.15)
 
   if topo["layout"] == "jaw":
@@ -148,7 +152,7 @@ def sample_genome(topo: dict, seed: int, t: int, v: int) -> dict:
       taper=r.uniform(0.75, 1.0),
       flex_lo=(-r.uniform(0, 0.35, f["n"]) - np.r_[r.uniform(0, 0.15), np.zeros(f["n"] - 1)]).tolist(),  # base joint opens wider
       flex_hi=r.uniform(1.0, 2.2, f["n"]).tolist(),
-      abd=r.uniform(0.15, 0.6) if f["abd"] else 0.0,
+      abd=r.uniform(0.15, 1.0) if f["abd"] else 0.0,  # real abduction joints reach +-0.5-1.05 rad
       axis_noise=r.normal(0, 0.06, (f["n"] + 1, 3)).tolist(),  # small rotation vector per joint axis (~3.5 deg sd)
       ratio=r.uniform(0.6, 1.2, f["n"]).tolist(),  # mimic / tendon coupling coefficients
       # tendon_pull hands: joint return spring, fraction of torque per rad; must beat frictionloss (<= 5% of torque)

@@ -126,6 +126,7 @@ def probe(hand: mujoco.MjSpec, close_override: dict[str, str] | None = None) -> 
   tips_open = _tip_points(m, d, leaves, hand_geoms)
   palm = d.xipos[palm_body].copy()
   qpos_open = {m.joint(j).name: float(d.qpos[m.jnt_qposadr[j]]) for j in range(m.njnt)}
+  qpos_closed_named = {m.joint(j).name: float(qpos_closed[m.jnt_qposadr[j]]) for j in range(m.njnt)}
 
   # candidate centres: the plane spanned by palm->open tips and palm->closed tips, plus a grid over the hand's
   # extent (covers symmetric grippers, where that plane collapses to a line). Keep enclosed points: clear of the
@@ -165,7 +166,7 @@ def probe(hand: mujoco.MjSpec, close_override: dict[str, str] | None = None) -> 
   for order in (np.argsort(-(cl_open - cl_closed)), np.argsort(-cl_open), np.argsort(-cl_open[:n_plane])):
     cands += [c for c in pick(order) if not any(np.allclose(c[0], x[0]) for x in cands)]
   return dict(n_pinch=n_pinch,
-    ctrl_open=open_, ctrl_close=close, close_rule=rule, qpos_open=qpos_open, ambiguous=ambiguous, n_tips=len(leaves), palm=palm,
+    ctrl_open=open_, ctrl_close=close, close_rule=rule, qpos_open=qpos_open, qpos_closed=qpos_closed_named, ambiguous=ambiguous, n_tips=len(leaves), palm=palm,
     tips_open=tips_open, tips_closed=tips_closed, candidates=cands,
   )
 

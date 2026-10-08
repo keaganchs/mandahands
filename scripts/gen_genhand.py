@@ -1,7 +1,7 @@
 """Generate a GENHAND dataset: sample topologies x variants, run the validity filter, assign splits, measure
 descriptor-space coverage against the real hands, and write the manifest + report.
 
-  python scripts/gen_genhand.py                       # GENHAND-1K v2: registry/genhand-1k-v2.json, docs/genhand_report.md
+  python scripts/gen_genhand.py                       # GENHAND-1K v4: registry/genhand-1k-v4.json, docs/genhand_report.md
   python scripts/gen_genhand.py --topologies 20 --variants 4 --name genhand-dev --out /tmp/x   # quick run
 
 Needs data/real_hands/ (scripts/extract_real.py) for the coverage comparison.
@@ -239,7 +239,7 @@ def report(man, cov, path, sheet_png, cov_png):
 
 def main():
   ap = argparse.ArgumentParser()
-  ap.add_argument("--name", default="genhand-1k-v2")
+  ap.add_argument("--name", default="genhand-1k-v4")
   ap.add_argument("--seed", type=int, default=0)
   ap.add_argument("--topologies", type=int, default=200)
   ap.add_argument("--variants", type=int, default=8)
