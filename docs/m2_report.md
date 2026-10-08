@@ -79,3 +79,4 @@ Outputs: `data/real_hands/<id>/{hand.xml, meta.json, grasp.png}` (local, gitigno
 
 1. Self-collision: kept as is.
 2. NAO: dropped. 18 real hands remain.
+3. M3 changed the scripted close-and-lift (contact-stop closing, pinch candidates, BADQACC fails a trial). The M2 search was re-run: all 18 hands still pass; per-hand counts in `real_hands_report.md` are current, the counts quoted above are from M2.
