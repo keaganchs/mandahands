@@ -1,7 +1,7 @@
 {
 "version": "objects-v1",
 "seed": 0,
-"git": "",
+"git": "dd8dcdc6209faf4fc066380ac39b9a5e7db582f1",
 "n_per_family": 15,
 "max_err": {
 "abs": 0.005,
