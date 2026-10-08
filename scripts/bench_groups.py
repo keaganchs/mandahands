@@ -82,12 +82,12 @@ def build_groups(classes, worlds_per_group):
 
 def superset_group(nworld, n_variants=4, seed=0):
   """One maximal hand; per variant a random subset of fingers is locked (zero-width range) and collision-free
-  (geom and pair margins far negative). Only hands that are sub-hands of the superset can be represented."""
+  (geom and pair impedance at the floor, so their contacts exert no force). Only hands that are sub-hands of the superset can be represented."""
   import mujoco
 
   from mandahands.embodiments.procedural.generator import build, sample_genome
   from mandahands.sim.builder import add_self_collision
-  from mandahands.sim.groups import PAIR_OFF, Group
+  from mandahands.sim.groups import OFF_SOLIMP, Group
 
   topo = dict(layout="anthro", n_fingers=5, n_phalanges=3, coupling="full", tip="capsule", thumb="opposed",
               thumb_phalanges=3, abduction="all", abd_order="abd_first")
@@ -107,11 +107,11 @@ def superset_group(nworld, n_variants=4, seed=0):
     for g in range(m.ngeom):
       n = m.geom(g).name
       if n.startswith("f") and n[1].isdigit() and int(n[1]) not in keep:
-        m.geom_margin[g] = PAIR_OFF
+        m.geom_solimp[g] = OFF_SOLIMP
     for p in range(m.npair):
       names = [m.geom(m.pair_geom1[p]).name, m.geom(m.pair_geom2[p]).name]
       if any(n.startswith("f") and n[1].isdigit() and int(n[1]) not in keep for n in names):
-        m.pair_margin[p] = PAIR_OFF
+        m.pair_solimp[p] = OFF_SOLIMP
     d = mujoco.MjData(m)
     d.qpos[:], d.ctrl[:], d.eq_active[:] = d0.qpos, d0.ctrl, d0.eq_active
     d.mocap_pos[:], d.mocap_quat[:] = d0.mocap_pos, d0.mocap_quat

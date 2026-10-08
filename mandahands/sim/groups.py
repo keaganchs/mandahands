@@ -7,8 +7,10 @@ between variants gets a batch of V. Fields MJWarp cannot batch must be equal acr
 groups variants by them (e.g. tendon coefficients, `wrap_prm`, split tendon-coupled classes).
 
 Self-collision pairs differ per variant (unreachable pairs are pruned per hand), so `union_pairs` gives every
-variant of a class the union of their pairs, with the ones a variant does not own disabled by a large negative
-pair margin (pair_margin is batchable).
+variant of a class the union of their pairs; the ones a variant does not own get impedance 1e-4 (pair_solimp is
+batchable), so their force is negligible. Those pairs were pruned as unreachable for that variant, so they rarely
+even touch. (In MJWarp 3.15 a contact is active iff dist < margin: gap only widens detection, and non-zero margins
+on box/mesh pairs are rejected while multi-contact CCD is on, which we keep for stable box/mesh contacts.)
 
 MultiGroup steps several groups, one captured CUDA graph each.
 """
@@ -27,15 +29,19 @@ from mandahands.sim.batch import capture_step, contact_stats
 
 BATCHABLE = {f.name for f in dataclasses.fields(types.Model) if is_array_spec(f.type) and getattr(f.type, "shape", ("",))[0] == "*"}
 UNUSED = {"dof_length"}  # differs between variants, but only read by sleeping, which we don't use
-PAIR_OFF = -1e3  # pair margin that never produces a contact
+OFF_SOLIMP = [1e-4, 1e-4, 0.001, 0.5, 2.0]  # impedance floor: a contact that exerts (almost) no force
+
+
+def _np(v):
+  if isinstance(v, wp.array):
+    return v.numpy()
+  if isinstance(v, (tuple, list)) and v and all(isinstance(x, wp.array) for x in v):  # e.g. body_tree levels
+    return tuple(x.numpy() for x in v)
+  return v
 
 
 def _fields(mw) -> dict:
-  out = {}
-  for f in dataclasses.fields(mw):
-    v = getattr(mw, f.name)
-    out[f.name] = v.numpy() if isinstance(v, wp.array) else v
-  return out
+  return {f.name: _np(getattr(mw, f.name)) for f in dataclasses.fields(mw)}
 
 
 def signature(mjm: mujoco.MjModel) -> str:
@@ -45,10 +51,11 @@ def signature(mjm: mujoco.MjModel) -> str:
   for name, v in sorted(_fields(mw).items()):
     if name in BATCHABLE or name in UNUSED:
       continue
-    if isinstance(v, np.ndarray):
-      h.update(name.encode() + str(v.shape).encode() + np.ascontiguousarray(v).tobytes())
-    elif isinstance(v, (int, float, bool, str, tuple)):
-      h.update(f"{name}={v}".encode())
+    for i, a in enumerate(v if isinstance(v, tuple) and v and isinstance(v[0], np.ndarray) else [v]):
+      if isinstance(a, np.ndarray):
+        h.update(f"{name}[{i}]{a.shape}".encode() + np.ascontiguousarray(a).tobytes())
+      elif isinstance(a, (int, float, bool, str)) or a is None:
+        h.update(f"{name}={a}".encode())
   return h.hexdigest()[:16]
 
 
@@ -63,8 +70,8 @@ def union_pairs(hands: list[mujoco.MjSpec]) -> None:
       h.delete(p)
     for k in union:
       src = o.get(k, template)
-      h.add_pair(geomname1=k[0], geomname2=k[1], condim=src.condim, solref=list(src.solref), solimp=list(src.solimp),
-                 margin=0.0 if k in o else PAIR_OFF)
+      h.add_pair(geomname1=k[0], geomname2=k[1], condim=src.condim, solref=list(src.solref),
+                 solimp=list(src.solimp) if k in o else OFF_SOLIMP)
 
 
 class Group:

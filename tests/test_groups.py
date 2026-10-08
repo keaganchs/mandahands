@@ -6,7 +6,7 @@ import pytest
 from mandahands.embodiments import registry
 from mandahands.embodiments.procedural.generator import build, sample_genome, topology_key
 from mandahands.sim.builder import SceneCfg, add_self_collision, build_scene, simple_hand
-from mandahands.sim.groups import Group, signature, union_pairs
+from mandahands.sim.groups import OFF_SOLIMP, Group, signature, union_pairs
 
 
 def _class_variants(coupling="mimic", n=3):
@@ -53,22 +53,21 @@ def test_group_worlds_match_their_variants_on_cpu():
   assert err < 1e-3, err
 
 
-def test_pair_margin_disables_a_pair():
+def test_soft_pair_is_disabled():
   # simple_hand's fingertips meet when fully closed; variant 1 has all its pairs disabled
   a, b = simple_hand(SceneCfg()), simple_hand(SceneCfg())
   for p in b.pairs:
-    p.margin = -1e3
+    p.solimp = OFF_SOLIMP
   ms, ds = _scenes([a, b])
   g = Group(ms, ds, nworld=2, njmax=200)
-  assert "pair_margin" in g.batched
+  assert "pair_solimp" in g.batched
   g.d.ctrl.assign(np.tile(ms[0].actuator_ctrlrange[:, 1], (2, 1)).astype(np.float32))
   for _ in range(400):
     mjw.step(g.m, g.d)
-  n = g.d.nacon.numpy()[0]
-  obj = ms[0].geom("obj_g0").id  # the parked object rests on the support in both worlds
-  self_contact = (g.d.contact.geom.numpy()[:n] != obj).all(1)
-  worlds = g.d.contact.worldid.numpy()[:n][self_contact]
-  assert (worlds == 0).sum() > 0 and (worlds == 1).sum() == 0
+  # a disabled pair still reports contacts, but exerts no force: world 1's fingertips pass through each other
+  q = g.d.qpos.numpy()
+  hand = slice(7, 7 + ms[0].nu)
+  assert np.abs(q[0, hand] - q[1, hand]).max() > 0.05  # world 1's fingertips pass through each other
 
 
 def test_structural_mismatch_rejected():
