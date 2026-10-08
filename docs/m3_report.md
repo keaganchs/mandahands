@@ -1,5 +1,7 @@
 # Milestone 3: procedural generator, validity filter, GENHAND-1K
 
+> **Update (M4):** generator v3/v4 changed actuator damping and frictionloss sampling and widened abduction, to cover the real hands at token level. The dataset is now `genhand-1k-v4` (965 valid, 39.7% rejected; 13/18 real hands in hand-level support). Numbers below are for v2; the current tables are in `genhand_report.md`. Details are in `m4_report.md`.
+
 Reproduce: `python scripts/gen_genhand.py` (about 6 min on 16 cores; needs `data/real_hands/` from `scripts/extract_real.py`), `pytest tests`.
 Outputs (committed): `registry/genhand-1k-v2.json` (manifest: topologies, per-hand filter results, splits, hashes), `docs/genhand_report.md` (generated tables), `docs/genhand_coverage.png`, `docs/genhand_sheet.png`.
 
