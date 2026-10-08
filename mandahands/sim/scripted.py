@@ -17,6 +17,7 @@ from mandahands.sim.builder import SceneCfg, build_scene
 LIFT = 0.10
 T_SETTLE, T_CLOSE, T_RELEASE, T_LIFT, T_HOLD = 0.2, 0.6, 0.2, 1.0, 0.5
 MIN_CLEARANCE = 0.005
+SQUEEZE = 0.15  # fraction of an actuator's range it keeps closing after first touching the object
 
 
 def _subtree(m, root):
@@ -121,6 +122,7 @@ def probe(hand: mujoco.MjSpec, close_override: dict[str, str] | None = None) -> 
   qpos_closed = d.qpos.copy()
   mujoco.mj_resetData(m, d)
   _settle(m, d, open_)
+  qpos_open_vec = d.qpos.copy()
   tips_open = _tip_points(m, d, leaves, hand_geoms)
   palm = d.xipos[palm_body].copy()
   qpos_open = {m.joint(j).name: float(d.qpos[m.jnt_qposadr[j]]) for j in range(m.njnt)}
@@ -154,10 +156,15 @@ def probe(hand: mujoco.MjSpec, close_override: dict[str, str] | None = None) -> 
   # three candidate lists (none wins on every hand): intrusion depth, largest enclosed object, and largest
   # enclosed object restricted to the palm/fingertip plane
   n_plane = len(plane)
-  cands = []
+  # pinch candidates first: where the closed fingertips converge, and on the way back to the palm (power grasp)
+  conv = tips_closed.mean(0)
+  pinch = [conv + f * (palm - conv) for f in (0.0, 0.25, 0.5, 0.75)]
+  d.qpos[:] = qpos_open_vec
+  cands = [(p, cl) for p in pinch if (cl := clearance(p)) > MIN_CLEARANCE]
+  n_pinch = len(cands)
   for order in (np.argsort(-(cl_open - cl_closed)), np.argsort(-cl_open), np.argsort(-cl_open[:n_plane])):
     cands += [c for c in pick(order) if not any(np.allclose(c[0], x[0]) for x in cands)]
-  return dict(
+  return dict(n_pinch=n_pinch,
     ctrl_open=open_, ctrl_close=close, close_rule=rule, qpos_open=qpos_open, ambiguous=ambiguous, n_tips=len(leaves), palm=palm,
     tips_open=tips_open, tips_closed=tips_closed, candidates=cands,
   )
@@ -177,15 +184,36 @@ def _quat_to(a, b):
 _FIT = {"sphere": 0.9, "cylinder": 0.9 / np.sqrt(2), "box": 0.9 / np.sqrt(3)}
 
 
+def _driven_bodies(m: mujoco.MjModel) -> np.ndarray:
+  """(nu, nbody) mask: bodies moved by each actuator (subtrees of its joints, or of its tendon's joints)."""
+  out = np.zeros((m.nu, m.nbody), bool)
+  for i in range(m.nu):
+    tid = m.actuator_trnid[i, 0]
+    if m.actuator_trntype[i] == mujoco.mjtTrn.mjTRN_JOINT:
+      joints = [tid]
+    elif m.actuator_trntype[i] == mujoco.mjtTrn.mjTRN_TENDON:
+      adr, num = m.tendon_adr[tid], m.tendon_num[tid]
+      joints = [m.wrap_objid[w] for w in range(adr, adr + num) if m.wrap_type[w] == mujoco.mjtWrap.mjWRAP_JOINT]
+    else:
+      continue
+    for j in joints:
+      for b in _subtree(m, m.jnt_bodyid[j]):
+        out[i, b] = True
+  return out
+
+
 def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj: str, cfg: SceneCfg | None = None,
-                   on_phase=None) -> dict:
+                   on_phase=None, size: float | None = None, squeeze: float | None = SQUEEZE) -> dict:
   """Object of type obj fitted at `centre` (mount frame); the palm is placed straight above it.
+
+  size: object half-extent; default fits the object inside the clearance sphere.
+  squeeze: see SQUEEZE; None closes every actuator fully (the M2 behaviour).
 
   on_phase(name, m, d) is called after each phase (open/closed/released/lifted/held), e.g. to render.
   """
   on_phase = on_phase or (lambda name, m, d: None)
   cfg = cfg or SceneCfg()
-  size = _FIT[obj] * clearance
+  size = size or _FIT[obj] * clearance
   cfg = SceneCfg(**{**cfg.__dict__, "obj": obj, "obj_half": size})
   ax = (centre - pr["palm"]) / np.linalg.norm(centre - pr["palm"])
   quat = _quat_to(ax, np.array([0.0, 0.0, -1.0]))
@@ -216,7 +244,23 @@ def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj:
   run(T_SETTLE, lambda s: pr["ctrl_open"])
   on_phase("open", m, d)
   pen_open = min([c.dist for c in d.contact[: d.ncon]], default=0.0)
-  run(T_CLOSE, lambda s: pr["ctrl_open"] + min(s / 0.7, 1.0) * (pr["ctrl_close"] - pr["ctrl_open"]))
+  # close: each actuator ramps open -> closed until a link it drives touches the object, then squeezes
+  # SQUEEZE more of its range and stops (full closure at full torque squirts small objects out)
+  drives = _driven_bodies(m)
+  frac = np.full(m.nu, np.inf)  # per-actuator stop fraction, set at first touch
+  n_close = int(T_CLOSE / dt)
+  for k in range(n_close):
+    ramp = min(k / (0.7 * n_close), 1.0)
+    if squeeze is not None:
+      touching = np.zeros(m.nbody, bool)
+      for c in d.contact[: d.ncon]:
+        b1, b2 = m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]
+        if oid in (b1, b2):
+          touching[b1 + b2 - oid] = True
+      hit = (drives & touching).any(1) & np.isinf(frac)
+      frac[hit] = ramp + squeeze
+    d.ctrl[:] = pr["ctrl_open"] + np.minimum(np.minimum(ramp, frac), 1.0) * (pr["ctrl_close"] - pr["ctrl_open"])
+    mujoco.mj_step(m, d)
   on_phase("closed", m, d)
   n_contact = sum(1 for c in d.contact[: d.ncon] if oid in (m.geom_bodyid[c.geom1], m.geom_bodyid[c.geom2]))
   d.eq_active[sup] = 0
@@ -230,9 +274,11 @@ def close_and_lift(hand: mujoco.MjSpec, pr: dict, centre, clearance: float, obj:
   drift = float(np.linalg.norm((d.xpos[oid] - d.xpos[wid]) - rel0))
   dz = float(d.xpos[oid, 2] - obj_pos[2])
   # pen_open: the open hand must not start inside the object, or "holding" is just interpenetration
-  ok = bool(abs(dz - LIFT) < 0.03 and drift < 0.02 and pen_open > -0.005 and np.isfinite(d.qpos).all())
+  # BADQACC makes MuJoCo silently reset mjData (object teleports back): an unstable trial never passes
+  unstable = d.warning[mujoco.mjtWarning.mjWARN_BADQACC].number > 0
+  ok = bool(abs(dz - LIFT) < 0.03 and drift < 0.02 and pen_open > -0.005 and not unstable)
   return dict(obj=obj, size=size, centre=np.asarray(centre).tolist(), ok=ok, dz=dz, drift=drift,
-              pen_open=float(pen_open), n_contact=n_contact, wrist_pos=wrist_pos.tolist(), wrist_quat=quat.tolist())
+              pen_open=float(pen_open), n_contact=n_contact, unstable=bool(unstable), wrist_pos=wrist_pos.tolist(), wrist_quat=quat.tolist())
 
 
 def grasp_search(hand: mujoco.MjSpec, pr: dict | None = None, n_centres: int = 18, close_override=None,

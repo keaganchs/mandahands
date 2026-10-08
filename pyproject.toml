@@ -7,6 +7,13 @@ dependencies = [
   "mujoco-warp==3.15.0",
   "warp-lang==1.18.0",
   "numpy",
+  "trimesh",
+  "pycollada",  # .dae meshes in real-hand sources
+  "lxml",
+  "scipy",
+  "coacd",
+  "pillow",
+  "matplotlib",
 ]
 
 [project.optional-dependencies]
